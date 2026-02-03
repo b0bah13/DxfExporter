@@ -182,11 +182,21 @@ namespace DxfExporter
             public string Description { get; init; }
         }
 
+        /// <summary>
+        /// Инициализирует список шагов ознакомительного режима после загрузки окна.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             InitializeTourSteps();
         }
 
+        /// <summary>
+        /// Пересчитывает позицию подсветки при изменении размеров окна.
+        /// </summary>
+        /// <param name="sender">Источник события.</param>
+        /// <param name="e">Аргументы события.</param>
         private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             if (_isTourActive)
@@ -195,8 +205,12 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Формирует последовательность шагов для ознакомительного режима.
+        /// </summary>
         private void InitializeTourSteps()
         {
+            // Очищаем предыдущую последовательность шагов.
             _tourSteps.Clear();
             _tourSteps.Add(new TourStep
             {
@@ -254,36 +268,55 @@ namespace DxfExporter
                 Title = "Состав шаблона",
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
+
+            // TODO: Добавить будущие элементы в тур:
+            // _tourSteps.Add(new TourStep { Tab = HomeTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
+            // _tourSteps.Add(new TourStep { Tab = SettingsTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
         }
 
+        /// <summary>
+        /// Запускает ознакомительный режим с первого шага.
+        /// </summary>
         private void StartTour()
         {
             if (_tourSteps.Count == 0)
             {
+                // Если шаги ещё не подготовлены, создаём их.
                 InitializeTourSteps();
             }
 
             if (_tourSteps.Count == 0)
             {
+                // Нечего показывать.
                 return;
             }
 
+            // Сбрасываем индекс на первый шаг и включаем оверлей.
             _tourIndex = 0;
             _isTourActive = true;
             TourOverlay.Visibility = Visibility.Visible;
+            // Отрисовываем первый шаг.
             ShowTourStep();
         }
 
+        /// <summary>
+        /// Завершает ознакомительный режим и скрывает оверлей.
+        /// </summary>
         private void EndTour()
         {
+            // Сбрасываем флаг активности и скрываем оверлей.
             _isTourActive = false;
             TourOverlay.Visibility = Visibility.Collapsed;
         }
 
+        /// <summary>
+        /// Отображает текущий шаг и запускает пересчёт позиции подсветки.
+        /// </summary>
         private void ShowTourStep()
         {
             if (_tourIndex < 0 || _tourIndex >= _tourSteps.Count)
             {
+                // Если индекс вышел за границы — завершаем тур.
                 EndTour();
                 return;
             }
@@ -291,44 +324,54 @@ namespace DxfExporter
             var step = _tourSteps[_tourIndex];
             if (step.Tab != null)
             {
+                // Переключаем вкладку на нужную.
                 MainTabControl.SelectedItem = step.Tab;
             }
 
+            // Обновляем тексты и состояние кнопок.
             TourTitleText.Text = step.Title;
             TourDescriptionText.Text = step.Description;
             TourPrevButton.IsEnabled = _tourIndex > 0;
             TourNextButton.Content = _tourIndex >= _tourSteps.Count - 1 ? "Завершить" : "Вперёд";
 
+            // После изменения вкладки пересчитываем позицию элементов.
             Dispatcher.BeginInvoke(UpdateTourVisual, DispatcherPriority.Loaded);
         }
 
+        /// <summary>
+        /// Вычисляет геометрию затемнения и позицию подсказки для текущего элемента.
+        /// </summary>
         private void UpdateTourVisual()
         {
             if (!_isTourActive || _tourIndex < 0 || _tourIndex >= _tourSteps.Count)
             {
+                // Не пересчитываем позицию, если тур неактивен.
                 return;
             }
 
             var target = _tourSteps[_tourIndex].Target;
             if (target == null)
             {
+                // Если элемента нет, нечего подсвечивать.
                 return;
             }
 
             target.UpdateLayout();
             if (target.ActualWidth <= 0 || target.ActualHeight <= 0)
             {
+                // Повторяем пересчёт, когда элемент получит размеры.
                 Dispatcher.BeginInvoke(UpdateTourVisual, DispatcherPriority.Loaded);
                 return;
             }
 
-            var windowRect = new Rect(0, 0, ActualWidth, ActualHeight);
-            var targetRect = target.TransformToAncestor(this)
+            // Считаем координаты относительно оверлея, чтобы избежать смещения из-за рамки окна.
+            var overlayRect = new Rect(0, 0, TourOverlay.ActualWidth, TourOverlay.ActualHeight);
+            var targetRect = target.TransformToAncestor(TourOverlay)
                 .TransformBounds(new Rect(0, 0, target.ActualWidth, target.ActualHeight));
             targetRect.Inflate(6, 6);
 
             var overlayGeometry = new GeometryGroup { FillRule = FillRule.EvenOdd };
-            overlayGeometry.Children.Add(new RectangleGeometry(windowRect));
+            overlayGeometry.Children.Add(new RectangleGeometry(overlayRect));
             overlayGeometry.Children.Add(new RectangleGeometry(targetRect, 6, 6));
             TourDimPath.Data = overlayGeometry;
 
@@ -337,10 +380,11 @@ namespace DxfExporter
             Canvas.SetLeft(TourHighlightBorder, targetRect.Left);
             Canvas.SetTop(TourHighlightBorder, targetRect.Top);
 
+            // Подбираем позицию подсказки рядом с элементом и удерживаем её в пределах оверлея.
             TourTooltipBorder.Measure(new Size(300, double.PositiveInfinity));
             var tooltipSize = TourTooltipBorder.DesiredSize;
             var tooltipLeft = targetRect.Right + 12;
-            if (tooltipLeft + tooltipSize.Width > windowRect.Right)
+            if (tooltipLeft + tooltipSize.Width > overlayRect.Right)
             {
                 tooltipLeft = targetRect.Left - tooltipSize.Width - 12;
             }
@@ -351,9 +395,9 @@ namespace DxfExporter
             }
 
             var tooltipTop = targetRect.Top;
-            if (tooltipTop + tooltipSize.Height > windowRect.Bottom)
+            if (tooltipTop + tooltipSize.Height > overlayRect.Bottom)
             {
-                tooltipTop = windowRect.Bottom - tooltipSize.Height - 12;
+                tooltipTop = overlayRect.Bottom - tooltipSize.Height - 12;
             }
 
             if (tooltipTop < 12)
@@ -365,10 +409,14 @@ namespace DxfExporter
             Canvas.SetTop(TourTooltipBorder, tooltipTop);
         }
 
+        /// <summary>
+        /// Переходит к предыдущему шагу тура.
+        /// </summary>
         private void TourPrev_Click(object sender, RoutedEventArgs e)
         {
             if (_tourIndex <= 0)
             {
+                // Первый шаг — назад недоступен.
                 return;
             }
 
@@ -376,10 +424,14 @@ namespace DxfExporter
             ShowTourStep();
         }
 
+        /// <summary>
+        /// Переходит к следующему шагу тура или завершает его на последнем шаге.
+        /// </summary>
         private void TourNext_Click(object sender, RoutedEventArgs e)
         {
             if (_tourIndex >= _tourSteps.Count - 1)
             {
+                // На последнем шаге завершаем тур.
                 EndTour();
                 return;
             }
@@ -388,8 +440,12 @@ namespace DxfExporter
             ShowTourStep();
         }
 
+        /// <summary>
+        /// Завершает ознакомительный режим по нажатию кнопки закрытия.
+        /// </summary>
         private void TourClose_Click(object sender, RoutedEventArgs e)
         {
+            // Закрываем ознакомительный режим по запросу пользователя.
             EndTour();
         }
 
