@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -35,6 +36,9 @@ namespace DxfExporter
         public MaskEditorViewModel MaskVm { get; } = new MaskEditorViewModel();
         public ExportSettings FolderSettings = new ExportSettings();
         public string AppVersion { get; private set; }
+        private readonly List<TourStep> _tourSteps = new();
+        private int _tourIndex;
+        private bool _isTourActive;
 
         /// <summary>
         /// Перечисление для указания источника вызова. 
@@ -77,6 +81,9 @@ namespace DxfExporter
                 string txtInfo = lastVer.Description;
                 ShowNewVersion.ShowInfo(txtInfo);
             }
+
+            Loaded += MainWindow_Loaded;
+            SizeChanged += MainWindow_SizeChanged;
         }
         
         #region Обработка кастомного заголовка
@@ -162,15 +169,231 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void InfoClick(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Сканировать можно сборки и детали. Можно производить поиск по разным столбцам." +
-                            "\nНажав ПКМ на отсканированной детали откроется контекстное меню, через которое можно настроить свойства выгрузки. Все свойства отображаются в соответствующем столбце." +
-                            "\nВ каждой детали можно изменить \"Обозначение\",\"Наименование\",\"Толщина\",\"Кол-во\". Материал меняется или добавляется через контекстное меню." +
-                            "\nПри создании dxf, строки с успешно выгруженными деталями окрасятся в зелёный, строки с ошибками - в красный" +
-                            "\n\nНа вкладке \"Настройки\" можно выбрать структуру выгрузки папок. Задать параметр для пользовательского выбора папки сохранения dxf файлов." +
-                            "\nМожно выбрать стандартный шаблон имени файла dxf. Либо создать пользовательский шаблон, собрав его из параметров и пользовательского текста" +
-                            "\n\nНа вкладке \"Логи\" отображается информация о работе программы.",
-                "Информация о программе", MessageBoxButton.OK, MessageBoxImage.Information);
+            StartTour();
         }
+
+        #region Ознакомительный режим
+
+        private sealed class TourStep
+        {
+            public TabItem Tab { get; init; }
+            public FrameworkElement Target { get; init; }
+            public string Title { get; init; }
+            public string Description { get; init; }
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            InitializeTourSteps();
+        }
+
+        private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (_isTourActive)
+            {
+                UpdateTourVisual();
+            }
+        }
+
+        private void InitializeTourSteps()
+        {
+            _tourSteps.Clear();
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = scanButton,
+                Title = "Сканирование",
+                Description = "Запускает сканирование выбранной сборки или детали."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = startButton,
+                Title = "Создание DXF",
+                Description = "Создаёт DXF для выбранных позиций в таблице."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = searchBox,
+                Title = "Поиск",
+                Description = "Введите текст, чтобы отфильтровать таблицу по выбранному столбцу."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = searchComboBox,
+                Title = "Столбец поиска",
+                Description = "Выберите, по какому столбцу искать совпадения."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = clearButton,
+                Title = "Очистка",
+                Description = "Сбрасывает строку поиска и возвращает полный список."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = userDirect,
+                Title = "Папка выгрузки",
+                Description = "Включает пользовательское расположение папки для DXF файлов."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = templateComboBox,
+                Title = "Шаблон имени",
+                Description = "Выберите шаблон имени файла DXF или настройте собственный."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = gbMaskSettings,
+                Title = "Состав шаблона",
+                Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
+            });
+        }
+
+        private void StartTour()
+        {
+            if (_tourSteps.Count == 0)
+            {
+                InitializeTourSteps();
+            }
+
+            if (_tourSteps.Count == 0)
+            {
+                return;
+            }
+
+            _tourIndex = 0;
+            _isTourActive = true;
+            TourOverlay.Visibility = Visibility.Visible;
+            ShowTourStep();
+        }
+
+        private void EndTour()
+        {
+            _isTourActive = false;
+            TourOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private void ShowTourStep()
+        {
+            if (_tourIndex < 0 || _tourIndex >= _tourSteps.Count)
+            {
+                EndTour();
+                return;
+            }
+
+            var step = _tourSteps[_tourIndex];
+            if (step.Tab != null)
+            {
+                MainTabControl.SelectedItem = step.Tab;
+            }
+
+            TourTitleText.Text = step.Title;
+            TourDescriptionText.Text = step.Description;
+            TourPrevButton.IsEnabled = _tourIndex > 0;
+            TourNextButton.Content = _tourIndex >= _tourSteps.Count - 1 ? "Завершить" : "Вперёд";
+
+            Dispatcher.BeginInvoke(UpdateTourVisual, DispatcherPriority.Loaded);
+        }
+
+        private void UpdateTourVisual()
+        {
+            if (!_isTourActive || _tourIndex < 0 || _tourIndex >= _tourSteps.Count)
+            {
+                return;
+            }
+
+            var target = _tourSteps[_tourIndex].Target;
+            if (target == null)
+            {
+                return;
+            }
+
+            target.UpdateLayout();
+            if (target.ActualWidth <= 0 || target.ActualHeight <= 0)
+            {
+                Dispatcher.BeginInvoke(UpdateTourVisual, DispatcherPriority.Loaded);
+                return;
+            }
+
+            var windowRect = new Rect(0, 0, ActualWidth, ActualHeight);
+            var targetRect = target.TransformToAncestor(this)
+                .TransformBounds(new Rect(0, 0, target.ActualWidth, target.ActualHeight));
+            targetRect.Inflate(6, 6);
+
+            var overlayGeometry = new GeometryGroup { FillRule = FillRule.EvenOdd };
+            overlayGeometry.Children.Add(new RectangleGeometry(windowRect));
+            overlayGeometry.Children.Add(new RectangleGeometry(targetRect, 6, 6));
+            TourDimPath.Data = overlayGeometry;
+
+            TourHighlightBorder.Width = targetRect.Width;
+            TourHighlightBorder.Height = targetRect.Height;
+            Canvas.SetLeft(TourHighlightBorder, targetRect.Left);
+            Canvas.SetTop(TourHighlightBorder, targetRect.Top);
+
+            TourTooltipBorder.Measure(new Size(300, double.PositiveInfinity));
+            var tooltipSize = TourTooltipBorder.DesiredSize;
+            var tooltipLeft = targetRect.Right + 12;
+            if (tooltipLeft + tooltipSize.Width > windowRect.Right)
+            {
+                tooltipLeft = targetRect.Left - tooltipSize.Width - 12;
+            }
+
+            if (tooltipLeft < 12)
+            {
+                tooltipLeft = 12;
+            }
+
+            var tooltipTop = targetRect.Top;
+            if (tooltipTop + tooltipSize.Height > windowRect.Bottom)
+            {
+                tooltipTop = windowRect.Bottom - tooltipSize.Height - 12;
+            }
+
+            if (tooltipTop < 12)
+            {
+                tooltipTop = 12;
+            }
+
+            Canvas.SetLeft(TourTooltipBorder, tooltipLeft);
+            Canvas.SetTop(TourTooltipBorder, tooltipTop);
+        }
+
+        private void TourPrev_Click(object sender, RoutedEventArgs e)
+        {
+            if (_tourIndex <= 0)
+            {
+                return;
+            }
+
+            _tourIndex--;
+            ShowTourStep();
+        }
+
+        private void TourNext_Click(object sender, RoutedEventArgs e)
+        {
+            if (_tourIndex >= _tourSteps.Count - 1)
+            {
+                EndTour();
+                return;
+            }
+
+            _tourIndex++;
+            ShowTourStep();
+        }
+
+        private void TourClose_Click(object sender, RoutedEventArgs e)
+        {
+            EndTour();
+        }
+
+        #endregion
 
 
         #endregion
