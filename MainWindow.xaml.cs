@@ -257,6 +257,20 @@ namespace DxfExporter
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
+                Target = categorizeMaterial,
+                Title = "Папка выгрузки",
+                Description = "Включает распределение DXF файлов по материалам."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = categorizeThickness,
+                Title = "Папка выгрузки",
+                Description = "Включает распределение DXF файлов по толщинам."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
                 Target = templateComboBox,
                 Title = "Шаблон имени",
                 Description = "Выберите шаблон имени файла DXF или настройте собственный."

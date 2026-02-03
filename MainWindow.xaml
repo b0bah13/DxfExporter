@@ -472,15 +472,15 @@
                         </Grid.RowDefinitions>
 
                         <!-- Основная область (будет отключаться при Стандарт / Материал) -->
-                        <GroupBox Header="Папки выгрузки">
-                            <Grid>
+                        <GroupBox Header="Папки выгрузки" HorizontalAlignment="Left">
+                            <Grid HorizontalAlignment="Left">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <CheckBox x:Name="userDirect" Content="Пользовательское расположение папки DXF" 
-                                    IsChecked="False" Margin="5,3,0,5" 
+                                    IsChecked="False" Margin="5,3,5,5" 
                                     ToolTipService.InitialShowDelay="400"
                                     Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked"/>
                                 <CheckBox x:Name="categorizeMaterial" Content="Распределить по материалам" 
