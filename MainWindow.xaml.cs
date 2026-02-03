@@ -366,8 +366,16 @@ namespace DxfExporter
 
             // Считаем координаты относительно оверлея, чтобы избежать смещения из-за рамки окна.
             var overlayRect = new Rect(0, 0, TourOverlay.ActualWidth, TourOverlay.ActualHeight);
-            var targetRect = target.TransformToAncestor(TourOverlay)
+            // Преобразуем координаты элемента через окно, чтобы не зависеть от родителя оверлея.
+            var targetInWindow = target.TransformToAncestor(this)
                 .TransformBounds(new Rect(0, 0, target.ActualWidth, target.ActualHeight));
+            var overlayOffsetInWindow = TourOverlay.TransformToAncestor(this)
+                .Transform(new Point(0, 0));
+            var targetRect = new Rect(
+                targetInWindow.Left - overlayOffsetInWindow.X,
+                targetInWindow.Top - overlayOffsetInWindow.Y,
+                targetInWindow.Width,
+                targetInWindow.Height);
             targetRect.Inflate(6, 6);
 
             var overlayGeometry = new GeometryGroup { FillRule = FillRule.EvenOdd };
