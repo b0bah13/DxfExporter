@@ -490,54 +490,50 @@
                                   Width="150" Height="22" HorizontalAlignment="Left" Margin="3,3,0,5"/>
 
                                 <Grid x:Name="gridSettings" IsEnabled="False">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
 
-                                    <ListBox x:Name="AvailableList"
-                                         ItemsSource="{Binding AvailableHeaders}"
-                                         AllowDrop="True"
-                                         PreviewMouseLeftButtonDown="AvailableList_PreviewMouseLeftButtonDown"
-                                         PreviewMouseMove="AvailableList_PreviewMouseMove"
-                                         Drop="AvailableList_Drop"
-                                         SelectionMode="Single" 
-                                         MouseDoubleClick="AvailableList_MouseDoubleClick" 
-                                         ToolTip="Набор параметров" Height="130" VerticalAlignment="Top">
+                                    <StackPanel Grid.Column="0" VerticalAlignment="Top">
+                                        <ListBox x:Name="AvailableList"
+                                             ItemsSource="{Binding AvailableHeaders}"
+                                             AllowDrop="True"
+                                             PreviewMouseLeftButtonDown="AvailableList_PreviewMouseLeftButtonDown"
+                                             PreviewMouseMove="AvailableList_PreviewMouseMove"
+                                             Drop="AvailableList_Drop"
+                                             SelectionMode="Single" 
+                                             MouseDoubleClick="AvailableList_MouseDoubleClick" 
+                                             ToolTip="Набор параметров" Height="130" VerticalAlignment="Top">
 
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Key}"
-                                                       Foreground="{Binding IsUsed, Converter={StaticResource BooleanToGrayConverter}}"
-                                                       Opacity="{Binding IsUsed, Converter={StaticResource BooleanToOpacityConverter}}"
-                                                       IsHitTestVisible="{Binding IsUsed, Converter={StaticResource InvertBooleanConverter}}"/>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Key}"
+                                                           Foreground="{Binding IsUsed, Converter={StaticResource BooleanToGrayConverter}}"
+                                                           Opacity="{Binding IsUsed, Converter={StaticResource BooleanToOpacityConverter}}"
+                                                           IsHitTestVisible="{Binding IsUsed, Converter={StaticResource InvertBooleanConverter}}"/>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
 
-                                    <DockPanel Margin="0,5,0,0" Grid.Row="1" VerticalAlignment="Top">
-                                        <TextBlock TextWrapping="Wrap" 
-                                                   DockPanel.Dock="Top"
-                                                   Text="Пользовательский текст:" HorizontalAlignment="Left" 
-                                                   Margin="0,0,0,3" Visibility="Collapsed"/>
-                                        <Button DockPanel.Dock="Right"
-                                            Content="Добавить →" 
-                                            Width="90"
-                                            ToolTip="Добавить текст в правый список"
-                                            Click="AddCustomText_Click"/>
+                                        <DockPanel Margin="0,5,0,0" VerticalAlignment="Top">
+                                            <TextBlock TextWrapping="Wrap" 
+                                                       DockPanel.Dock="Top"
+                                                       Text="Пользовательский текст:" HorizontalAlignment="Left" 
+                                                       Margin="0,0,0,3" Visibility="Collapsed"/>
+                                            <Button DockPanel.Dock="Right"
+                                                Content="Добавить →" 
+                                                Width="90"
+                                                ToolTip="Добавить текст в правый список"
+                                                Click="AddCustomText_Click"/>
 
-                                        <TextBox x:Name="txtCustomText"
-                                             Text="{Binding CustomText}"
-                                             ToolTip="Ввод пользовательского текста"
-                                             Margin="0,0,5,0"/>
-                                    </DockPanel>
+                                            <TextBox x:Name="txtCustomText"
+                                                 Text="{Binding CustomText}"
+                                                 ToolTip="Ввод пользовательского текста"
+                                                 Margin="0,0,5,0"/>
+                                        </DockPanel>
+                                    </StackPanel>
 
                                     <StackPanel Grid.Column="1" 
                                             Margin="10,0,10,0" VerticalAlignment="Top">
@@ -565,8 +561,7 @@
                                          Grid.Column="2"
                                          ItemsSource="{Binding MaskParts}" 
                                          ToolTip="Элементы шаблоны"
-                                         ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
-                                         Grid.RowSpan="3">
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
