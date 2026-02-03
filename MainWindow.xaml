@@ -19,7 +19,7 @@
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         Background="White" 
-        Icon="/dxf-file.ico" Cursor="" MinWidth="650" MinHeight="400">
+        Icon="/dxf-file.ico" Cursor="" MinWidth="980" MinHeight="660">
 
     <Window.Resources>
         <!-- Серый цвет при IsUsed = true -->
@@ -240,24 +240,32 @@
                             Click="InfoClick" 
                             Style="{StaticResource WindowControlButton}"
                             Tag="InfoButton"
-                            ToolTip="Информация о программе" IsTabStop="False"/>
+                            ToolTip="Информация о программе" 
+                            ToolTipService.InitialShowDelay="400"
+                            IsTabStop="False"/>
                     <Button Content="—" 
                             Click="Minimize_Click" 
                             Style="{StaticResource WindowControlButton}"
                             Tag="MinimizeButton"
-                            ToolTip="Свернуть" IsTabStop="False"/>
+                            ToolTip="Свернуть"
+                            ToolTipService.InitialShowDelay="400"
+                            IsTabStop="False"/>
 
                     <Button x:Name="MaximizeButton" Content="⬜" 
-                            Click="Maximize_Click" 
+                            Click="Maximize_Click"
                             Style="{StaticResource WindowControlButton}"
                             Tag="MaximizeButton"
-                            ToolTip="Развернуть" IsTabStop="False"/>
+                            ToolTip="Развернуть"
+                            ToolTipService.InitialShowDelay="400"
+                            IsTabStop="False"/>
 
                     <Button Content="✕" 
                             Click="CloseClick" 
                             Style="{StaticResource WindowControlButton}"
                             Tag="CloseButton"
-                            ToolTip="Закрыть" IsTabStop="False"/>
+                            ToolTip="Закрыть"
+                            ToolTipService.InitialShowDelay="400"
+                            IsTabStop="False"/>
                 </StackPanel>
             </Grid>
 
@@ -279,6 +287,7 @@
                         <Button x:Name="scanButton" Width="80" Height="80" 
                             Style="{StaticResource SmallButtonStyle}"
                             ToolTip="Сканировать сборку/деталь" 
+                            ToolTipService.InitialShowDelay="400"
                             HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,5,5,5" Click="scanButton_Click">
                             <StackPanel Height="75" Width="75">
                                 <Image Source="/binoculars.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
@@ -291,6 +300,7 @@
                             Style="{StaticResource SmallButtonStyle}"
                             HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="3" 
                             ToolTip="Выгрузить dxf выбранных файлов" 
+                            ToolTipService.InitialShowDelay="400"
                             Margin="5,0,5,0" Click="startButton_Click">
                             <StackPanel Height="75" Width="75">
                                 <Image Source="/dxf.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
@@ -303,19 +313,22 @@
                             <TextBox x:Name="searchBox" TextWrapping="Wrap" Width="300" 
                                      Style="{StaticResource TextBoxStyle}"
                                      TextChanged="SearchBox_TextChanged" 
-                                     ToolTip="Поиск по выбранному заголовку"
+                                     ToolTip="Поиск по выбранному столбцу"
+                                     ToolTipService.InitialShowDelay="400"
                                      VerticalContentAlignment="Center"
                                      />
                             <ComboBox x:Name="searchComboBox" Width="120" Margin="5,0,0,0" 
                                       Style="{StaticResource ComboBoxStyle}"
                                       ItemsSource="{x:Static const:HeaderConst.AllFields}"
-                                      ToolTip="Выбор заголовка поиска" 
+                                      ToolTip="Выбор столбца для поиска" 
+                                      ToolTipService.InitialShowDelay="400"
                                       SelectedIndex="0" SelectionChanged="searchComboBox_SelectionChanged"/>
                             <Button x:Name="clearButton" Content="Очистить"
                                     Style="{StaticResource SmallButtonStyle}"
                                     Click="clearButton_Click"
                                     HorizontalAlignment="Center" 
                                     ToolTip="Очистка строки поиска"
+                                    ToolTipService.InitialShowDelay="400"
                                     Margin="5,0,0,0" Width="70"/>
                         </StackPanel>
 
@@ -439,7 +452,9 @@
                                             Click="VersInfoClick" 
                                             Style="{StaticResource SmallButtonStyle}"
                                             Tag="VersInfoButton"
-                                            ToolTip="Информация об обновлениях" IsTabStop="False" Width="18"/>
+                                            ToolTip="Информация об обновлениях" 
+                                            ToolTipService.InitialShowDelay="400"
+                                            IsTabStop="False" Width="18"/>
                                 </StackPanel>
                             </StatusBarItem>
 
@@ -466,11 +481,16 @@
                                 </Grid.RowDefinitions>
                                 <CheckBox x:Name="userDirect" Content="Пользовательское расположение папки DXF" 
                                     IsChecked="False" Margin="5,3,0,5" 
+                                    ToolTipService.InitialShowDelay="400"
                                     Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked"/>
                                 <CheckBox x:Name="categorizeMaterial" Content="Распределить по материалам" 
-                                          IsChecked="True" Margin="5,0,0,5" Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked" Grid.Row="1"/>
+                                          IsChecked="True" Margin="5,0,0,5" 
+                                          ToolTipService.InitialShowDelay="400"
+                                          Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked" Grid.Row="1"/>
                                 <CheckBox x:Name="categorizeThickness" Content="Распределить по толщинам" Grid.Row="2" 
-                                          IsChecked="True" Margin="5,0,0,0" Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked"/>
+                                          IsChecked="True" Margin="5,0,0,0" 
+                                          ToolTipService.InitialShowDelay="400"
+                                          Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked"/>
                             </Grid>
                         </GroupBox>
 
@@ -487,6 +507,7 @@
                                   ItemsSource="{x:Static const:MaskConst.AllFields}"
                                   SelectedIndex="0" SelectionChanged="templateComboBox_SelectionChanged"
                                   ToolTip="Выбор шаблона"
+                                  ToolTipService.InitialShowDelay="400"
                                   Width="150" Height="22" HorizontalAlignment="Left" Margin="3,3,0,5"/>
 
                                 <Grid x:Name="gridSettings" IsEnabled="False">
@@ -505,7 +526,7 @@
                                              Drop="AvailableList_Drop"
                                              SelectionMode="Single" 
                                              MouseDoubleClick="AvailableList_MouseDoubleClick" 
-                                             ToolTip="Набор параметров" Height="130" VerticalAlignment="Top">
+                                             Height="130" VerticalAlignment="Top">
 
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
@@ -526,11 +547,13 @@
                                                 Content="Добавить →" 
                                                 Width="90"
                                                 ToolTip="Добавить текст в правый список"
+                                                ToolTipService.InitialShowDelay="400"
                                                 Click="AddCustomText_Click"/>
 
                                             <TextBox x:Name="txtCustomText"
                                                  Text="{Binding CustomText}"
                                                  ToolTip="Ввод пользовательского текста"
+                                                 ToolTipService.InitialShowDelay="400"
                                                  Margin="0,0,5,0"/>
                                         </DockPanel>
                                     </StackPanel>
@@ -538,18 +561,28 @@
                                     <StackPanel Grid.Column="1" 
                                             Margin="10,0,10,0" VerticalAlignment="Top">
                                         <Button Content="⯈" Click="AddFromLeft_Click" Margin="0,0,0,5" Width="20" Height="20"
-                                            ToolTip="Добавить элемент"/>
+                                            ToolTip="Добавить элемент"
+                                            ToolTipService.InitialShowDelay="400"
+                                            />
                                         <Button Content="⯇" Click="RemoveSelected_Click" Margin="0,0,0,5" Height="20"
-                                            ToolTip="Удалить элемент" Width="20"/>
-                                        <Separator Margin="0,0,0,0"/>
+                                            ToolTip="Удалить элемент"
+                                            ToolTipService.InitialShowDelay="400"
+                                            Width="20"/>
+                                        <Separator/>
                                         <Button Content="⯅" Click="MoveUp_Click" Margin="0,5,0,5" Height="20"
-                                            ToolTip="Переместить элемент вверх" Width="20"/>
+                                            ToolTip="Переместить элемент вверх" 
+                                            ToolTipService.InitialShowDelay="400"
+                                            Width="20"/>
                                         <Button Content="⯆" Click="MoveDown_Click" Margin="0,0,0,5" Height="20"
-                                            ToolTip="Переместить элемент вниз" Width="20"/>
-                                        <Separator Margin="0,0,0,0"/>
+                                            ToolTip="Переместить элемент вниз"
+                                            ToolTipService.InitialShowDelay="400"
+                                            Width="20"/>
+                                        <Separator/>
                                         <Button Content="X" Click="ClearMaskParts_Click" Width="20" 
                                             Height="20" Margin="0,5,0,0"
-                                            ToolTip="Очистить список"/>
+                                            ToolTip="Очистить список"
+                                            ToolTipService.InitialShowDelay="400"
+                                            />
                                     </StackPanel>
                                     <ListBox x:Name="SelectedList"
                                          AllowDrop="True"
@@ -560,7 +593,6 @@
                                          MouseDoubleClick="SelectedList_MouseDoubleClick" 
                                          Grid.Column="2"
                                          ItemsSource="{Binding MaskParts}" 
-                                         ToolTip="Элементы шаблоны"
                                          ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
                                         <ListBox.ItemTemplate>
