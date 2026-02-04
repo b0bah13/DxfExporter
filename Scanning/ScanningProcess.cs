@@ -574,16 +574,16 @@ namespace DxfExporter.Scanning
                 try
                 {
                     var factory = sheetMetalCompDef.iPartFactory;
+                    if (factory == null && sheetMetalCompDef.IsiPartMember)
+                    {
+                        factory = sheetMetalCompDef.iPartMember?.iPartFactory;
+                    }
+
                     if (factory != null)
                     {
                         foreach (iPartTableRow row in factory.TableRows)
                         {
                             string memberName = row.MemberName;
-                            if (string.IsNullOrWhiteSpace(memberName))
-                            {
-                                memberName = row.PartNumber;
-                            }
-
                             if (!string.IsNullOrWhiteSpace(memberName))
                             {
                                 names.Add(memberName);

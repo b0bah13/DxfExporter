@@ -339,7 +339,7 @@
                                   AutoGenerateColumns="False" 
                                   Grid.ColumnSpan="3" CanUserDeleteRows="False"
                                   ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF"
-                                  RowDetailsVisibilityMode="Collapsed"
+                                  RowDetailsVisibilityMode="Visible"
                                   >
 
                             <DataGrid.RowStyle>
@@ -420,7 +420,9 @@
                                             <ToggleButton IsChecked="{Binding IsExpanded}"
                                                           Width="16" Height="16"
                                                           HorizontalAlignment="Center"
-                                                          VerticalAlignment="Center">
+                                                          VerticalAlignment="Center"
+                                                          HorizontalContentAlignment="Center"
+                                                          VerticalContentAlignment="Center">
                                                 <ToggleButton.Style>
                                                     <Style TargetType="ToggleButton">
                                                         <Setter Property="Visibility" Value="Collapsed"/>
