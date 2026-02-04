@@ -107,12 +107,12 @@ namespace DxfExporter.Scanning
                     //обработка сборки
                     case DocumentTypeEnum.kAssemblyDocumentObject:
                         //проверка потерянных ссылок
-                        if (HasMissingReferences((AssemblyDocument)doc))
-                        {
-                            _mainWindow.CheckExit.NeedExit = true;
-                            _mainWindow.CheckExit.Message = "В сборке есть потерянные ссылки. Необходимо скорректировать сборку.";
-                            return null;
-                        }
+                        //if (HasMissingReferences((AssemblyDocument)doc))
+                        //{
+                        //    _mainWindow.CheckExit.NeedExit = true;
+                        //    _mainWindow.CheckExit.Message = "В сборке есть потерянные ссылки. Необходимо скорректировать сборку.";
+                        //    return null;
+                        //}
 
                         _mainWindow.UpdateOverlay(CommonConstants.OverlayScan);
 
@@ -128,7 +128,8 @@ namespace DxfExporter.Scanning
                         //запись в таблицу найденных деталей
                         _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessData);
                         _mainWindow.UpdateOverlay(false);
-                        
+                        _mainWindow.UpdateLog("====================\n", false);
+
                         foreach (OccStructure occStructure in occResult.ScannedOcc)
                         {
                             // Вызывает исключение, если приложение закрыли
@@ -307,22 +308,24 @@ namespace DxfExporter.Scanning
         private void ScanOccurrences(CancellationToken cancellationToken, AssemblyDocument asmDocument,
             OccScanResult occResult)
         {
-            try
+            foreach (ComponentOccurrence componentOccurrence in asmDocument.ComponentDefinition.Occurrences)
             {
-                foreach (ComponentOccurrence componentOccurrence in asmDocument.ComponentDefinition.Occurrences)
-                {
-                    // Вызывает исключение, если приложение закрыли
-                    cancellationToken.ThrowIfCancellationRequested();
-                    // Выход, если приложение сигнализирует о завершении
-                    if (_mainWindow.CheckExit.NeedExit) return;
+                // Вызывает исключение, если приложение закрыли
+                cancellationToken.ThrowIfCancellationRequested();
 
-                    _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessScan, componentOccurrence.Name);
+                // Выход, если приложение сигнализирует о завершении
+                if (_mainWindow.CheckExit.NeedExit) return;
 
+                string nameOcc = componentOccurrence.Name;
+                _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessScan, nameOcc);
+
+                try
+                { 
                     // пропускает исключенные или подавленные элементы
                     if (componentOccurrence.Suppressed || componentOccurrence.Excluded)
                     {
                         
-                        _mainWindow.UpdateLog($"Пропущена деталь: {componentOccurrence.Name}");
+                        _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
                         continue; 
                     }
@@ -330,7 +333,15 @@ namespace DxfExporter.Scanning
                     // пропустить стандартные изделия
                     if (componentOccurrence.BOMStructure is BOMStructureEnum.kPurchasedBOMStructure)
                     {
-                        _mainWindow.UpdateLog($"Пропущена деталь: {componentOccurrence.Name}");
+                        _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
+                        _mainWindow.MinusProgress(_percent);
+                        continue;
+                    }
+
+                    // пропустить детали с потерянными ссылками
+                    if (componentOccurrence.ReferencedDocumentDescriptor.ReferenceMissing)
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
                         continue;
                     }
@@ -338,7 +349,7 @@ namespace DxfExporter.Scanning
                     // пропустить детали из Content center
                     if (componentOccurrence.Definition is PartComponentDefinition def && def.IsContentMember)
                     {
-                        _mainWindow.UpdateLog($"Пропущена деталь: {componentOccurrence.Name}");
+                        _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
                         continue;
                     }
@@ -353,14 +364,14 @@ namespace DxfExporter.Scanning
                         // пропускаем сборку если в ней нет деталей
                         if (asmDoc.ComponentDefinition.Occurrences.Count == 0)
                         {
-                            _mainWindow.UpdateLog($"Пропущена сборка: {componentOccurrence.Name}");
+                            _mainWindow.UpdateLog($"Пропущена сборка: {nameOcc}");
                             _mainWindow.MinusProgress(_percent);
                             continue;
                         }
 
                         ScanOccurrences(cancellationToken, asmDoc, occResult);
 
-                        _mainWindow.UpdateLog($"Обработана сборка: {componentOccurrence.Name}");
+                        _mainWindow.UpdateLog($"Обработана сборка: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
                     }
                     else if (componentOccurrence.DefinitionDocumentType == DocumentTypeEnum.kPartDocumentObject)
@@ -369,7 +380,7 @@ namespace DxfExporter.Scanning
                         // пропускаем многотельную деталь
                         if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1)
                         {
-                            _mainWindow.UpdateLog($"Пропущена деталь: {componentOccurrence.Name}");
+                            _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                             _mainWindow.MinusProgress(_percent);
                             continue;
                         }
@@ -377,7 +388,7 @@ namespace DxfExporter.Scanning
                         // пропускаем не листовую деталь
                         if (pDoc.SubType != SubType.ЛистоваяДеталь)
                         {
-                            _mainWindow.UpdateLog($"Пропущена деталь: {componentOccurrence.Name}");
+                            _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                             _mainWindow.MinusProgress(_percent);
                             continue;
                         }
@@ -392,21 +403,23 @@ namespace DxfExporter.Scanning
 
                         occResult.AddNode(structure);
 
-                        _mainWindow.UpdateLog($"Обработана деталь: {componentOccurrence.Name}");
+                        _mainWindow.UpdateLog($"Обработана деталь: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
                     }
-                    
+
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.StackTrace);
-            }
-            finally
-            {
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex.StackTrace);
+                    _mainWindow.UpdateLog($"Ошибка при сканировании: {nameOcc}");
+                    continue;
+                }
+                finally
+                {
+
+                }
 
             }
-
 
         }
 
@@ -526,7 +539,7 @@ namespace DxfExporter.Scanning
                 NullFlat = sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0
             };
             
-            _mainWindow.UpdateLog($"Обработана деталь: {partDoc.DisplayName}");
+            _mainWindow.UpdateLog($"Записана в таблицу деталь: {partDoc.DisplayName}");
 
             return structure;
         }
