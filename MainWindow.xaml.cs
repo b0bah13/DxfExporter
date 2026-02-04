@@ -1008,13 +1008,14 @@ namespace DxfExporter
                 
                 scanData.ItemsSource = _scanResult.ScannedData;
 
-                foreach (StructureClass structureClass in scanData.ItemsSource)
+                var scannedData = scanData.ItemsSource as ObservableCollection<StructureClass>;
+                foreach (StructureClass structureClass in FlattenScanData(scannedData))
                 {
                     structureClass.UpdateUnloadProp();
                 }
 
                 // подсветить детали с ошибками
-                SelectDetails(scanData.ItemsSource as ObservableCollection<StructureClass>);
+                SelectDetails(scannedData);
 
             }
             catch (Exception ex)
@@ -1049,7 +1050,8 @@ namespace DxfExporter
                     return;
                 }
 
-                int unloadCount = (scanData.ItemsSource as ObservableCollection<StructureClass>).Count(structureClass => structureClass.NeedUnload);
+                var scannedData = scanData.ItemsSource as ObservableCollection<StructureClass>;
+                int unloadCount = FlattenScanData(scannedData).Count(structureClass => structureClass.NeedUnload);
                 if (unloadCount == 0)
                 {
                     MessageBox.Show("Не выбрана ни одна деталь для выгрузки!", "Нет данных", MessageBoxButton.OK,
@@ -1063,7 +1065,7 @@ namespace DxfExporter
                 // Дать UI возможность обновить интерфейс
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>;
+                var procData = new ObservableCollection<StructureClass>(FlattenScanData(scannedData));
                 var maskData = MaskVm.MaskParts;
                 var modeName = MaskVm.ModeName;
 
@@ -1552,7 +1554,7 @@ namespace DxfExporter
         /// <param name="scannedData">Данные сканирования</param>
         private static void SelectDetails(ObservableCollection<StructureClass>? scannedData)
         {
-            foreach (StructureClass structureClass in scannedData)
+            foreach (StructureClass structureClass in FlattenScanData(scannedData))
             {
                 if (structureClass.NoFlat)
                 {
@@ -1565,6 +1567,29 @@ namespace DxfExporter
                     structureClass.Status = ErrorsConst.NullFlat;
                 }
             }
+        }
+
+        private static List<StructureClass> FlattenScanData(IEnumerable<StructureClass>? scannedData)
+        {
+            List<StructureClass> result = new List<StructureClass>();
+            if (scannedData == null)
+            {
+                return result;
+            }
+
+            foreach (StructureClass structureClass in scannedData)
+            {
+                if (structureClass.IsGroup && structureClass.Children.Any())
+                {
+                    result.AddRange(structureClass.Children);
+                }
+                else
+                {
+                    result.Add(structureClass);
+                }
+            }
+
+            return result;
         }
 
 
@@ -1583,37 +1608,39 @@ namespace DxfExporter
                 return;
             }
 
-            // Фильтруем в зависимости от выбранного столбца
-            List<StructureClass> filtered = _scanResult.ScannedData.ToList();
+            Func<StructureClass, bool> matcher = _ => false;
 
             switch ((string)searchComboBox.SelectedValue)
             {
                 case HeaderConst.Обозначение:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.PartNumber) &&
-                                    x.PartNumber.ToLower().Contains(searchText)).ToList();
+                    matcher = x => !string.IsNullOrEmpty(x.PartNumber) &&
+                                   x.PartNumber.ToLower().Contains(searchText);
                     break;
                 case HeaderConst.Наименование:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Description) &&
-                                    x.Description.ToLower().Contains(searchText)).ToList();
+                    matcher = x => !string.IsNullOrEmpty(x.Description) &&
+                                   x.Description.ToLower().Contains(searchText);
+                    break;
+                case HeaderConst.Исполнение:
+                    matcher = x => !string.IsNullOrEmpty(x.MemberName) &&
+                                   x.MemberName.ToLower().Contains(searchText);
                     break;
                 case HeaderConst.Материал:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Material) &&
-                                    x.Material.ToLower().Contains(searchText)).ToList();
+                    matcher = x => !string.IsNullOrEmpty(x.Material) &&
+                                   x.Material.ToLower().Contains(searchText);
                     break;
                 case HeaderConst.Толщина:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Thickness.ToString()) &&
-                                    x.Thickness.ToString().ToLower().Contains(searchText)).ToList();
+                    matcher = x => !string.IsNullOrEmpty(x.Thickness.ToString()) &&
+                                   x.Thickness.ToString().ToLower().Contains(searchText);
                     break;
                 case HeaderConst.Количество:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Quantity.ToString()) &&
-                                    x.Quantity.ToString().ToLower().Contains(searchText)).ToList();
+                    matcher = x => !string.IsNullOrEmpty(x.Quantity.ToString()) &&
+                                   x.Quantity.ToString().ToLower().Contains(searchText);
                     break;
             }
+
+            List<StructureClass> filtered = _scanResult.ScannedData
+                .Where(x => matcher(x) || x.Children.Any(matcher))
+                .ToList();
 
             scanData.ItemsSource = new ObservableCollection<StructureClass>(filtered);
         }

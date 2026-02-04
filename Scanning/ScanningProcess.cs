@@ -482,17 +482,45 @@ namespace DxfExporter.Scanning
         /// Заполнение структуры детали
         /// </summary>
         /// <param name="partDoc">Деталь</param>
-        private StructureClass ProcessPart(PartDocument partDoc,string modName,double quantity = 1)
+        private StructureClass ProcessPart(PartDocument partDoc, string modName, double quantity = 1)
         {
             SheetMetalComponentDefinition sheetMetalCompDef = (SheetMetalComponentDefinition)partDoc.ComponentDefinition;
 
+            StructureClass structure = CreateStructure(partDoc, sheetMetalCompDef, modName, quantity);
+
+            var memberNames = GetMemberNames(sheetMetalCompDef);
+            if (memberNames.Count > 0)
+            {
+                structure.IsGroup = true;
+                structure.NeedUnload = false;
+                structure.NeedGrav = false;
+                structure.NeedBendLine = false;
+                structure.UnloadInTemplate = false;
+                structure.MemberName = string.Empty;
+                structure.UpdateUnloadProp();
+
+                foreach (string member in memberNames)
+                {
+                    StructureClass child = CreateStructure(partDoc, sheetMetalCompDef, member, quantity);
+                    child.IsGroup = false;
+                    structure.Children.Add(child);
+                }
+            }
+            
+            _mainWindow.UpdateLog($"Обработана деталь: {partDoc.DisplayName}");
+
+            return structure;
+        }
+
+        private StructureClass CreateStructure(PartDocument partDoc, SheetMetalComponentDefinition sheetMetalCompDef, string modName, double quantity)
+        {
             string partNumber = (string)GetPropertyValue(partDoc.PropertySets, "Design Tracking Properties",
                 "Part Number", "N/A");
             string description = (string)GetPropertyValue(partDoc.PropertySets, "Design Tracking Properties",
                 "Description", "N/A");
             string material = sheetMetalCompDef.Material.Name;
             double thick = Math.Round((double)sheetMetalCompDef.Thickness.Value * 10, 2);
-            
+
             //Создание структуры
             StructureClass structure = new StructureClass
             {
@@ -516,10 +544,59 @@ namespace DxfExporter.Scanning
                 NoFlat = !sheetMetalCompDef.HasFlatPattern,
                 NullFlat = sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0
             };
-            
-            _mainWindow.UpdateLog($"Обработана деталь: {partDoc.DisplayName}");
 
             return structure;
+        }
+
+        private static List<string> GetMemberNames(SheetMetalComponentDefinition sheetMetalCompDef)
+        {
+            HashSet<string> names = new HashSet<string>(StringComparer.CurrentCultureIgnoreCase);
+
+            if (sheetMetalCompDef.IsModelStateFactory || sheetMetalCompDef.IsModelStateMember)
+            {
+                try
+                {
+                    foreach (ModelState state in sheetMetalCompDef.ModelStates)
+                    {
+                        if (!string.IsNullOrWhiteSpace(state.Name))
+                        {
+                            names.Add(state.Name);
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            if (sheetMetalCompDef.IsiPartFactory || sheetMetalCompDef.IsiPartMember)
+            {
+                try
+                {
+                    var factory = sheetMetalCompDef.iPartFactory;
+                    if (factory != null)
+                    {
+                        foreach (iPartTableRow row in factory.TableRows)
+                        {
+                            string memberName = row.MemberName;
+                            if (string.IsNullOrWhiteSpace(memberName))
+                            {
+                                memberName = row.PartNumber;
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(memberName))
+                            {
+                                names.Add(memberName);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                }
+            }
+
+            return names.OrderBy(name => name).ToList();
         }
 
         /// <summary>
