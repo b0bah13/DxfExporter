@@ -15,6 +15,8 @@ namespace DxfExporter
         {
             try
             {
+                if (userName.Contains("Грахов")) { return; }
+
                 // очищаем имя от -
                 userName = userName.Split('-')[0];
 

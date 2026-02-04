@@ -432,6 +432,8 @@ namespace DxfExporter.Export_Dxf
                 _mainWindow.SelectAndScrollToItem();
                 _mainWindow.SetProgress(100);
                 _mainWindow.UpdateLog("====================\n", false);
+                
+                WriteReport.StartWriteReport(ctx.InvApp.UserName);
             }
             catch (Exception ex)
             {
