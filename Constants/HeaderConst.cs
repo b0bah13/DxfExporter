@@ -10,6 +10,7 @@ namespace DxfExporter.Constants
     {
         public const string Обозначение = "Обозначение";
         public const string Наименование = "Наименование";
+        public const string Исполнение = "Исполнение";
         public const string Материал = "Материал";
         public const string Толщина = "Толщина";
         public const string Количество = "Кол-во";
@@ -21,6 +22,7 @@ namespace DxfExporter.Constants
         {
             Обозначение,
             Наименование,
+            Исполнение,
             Материал,
             Толщина,
             Количество

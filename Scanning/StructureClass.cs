@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 
@@ -9,6 +10,13 @@ namespace DxfExporter.Scanning
     /// </summary>
     public class StructureClass : INotifyPropertyChanged
     {
+        private readonly ObservableCollection<StructureClass> _children = new ObservableCollection<StructureClass>();
+        private bool _isExpanded;
+
+        public StructureClass()
+        {
+            _children.CollectionChanged += (_, __) => OnPropertyChanged(nameof(HasChildren));
+        }
         /// <summary>
         /// Флаг указывающий нужно ли выгрузить dxf
         /// </summary>
@@ -108,6 +116,37 @@ namespace DxfExporter.Scanning
         /// Пустая развёртка
         /// </summary>
         public bool NullFlat { get; set; } = false;
+
+        /// <summary>
+        /// Группирующая строка (не выгружается)
+        /// </summary>
+        public bool IsGroup { get; set; } = false;
+
+        /// <summary>
+        /// Дочерние исполнения/состояния
+        /// </summary>
+        public ObservableCollection<StructureClass> Children => _children;
+
+        /// <summary>
+        /// Есть ли дочерние элементы
+        /// </summary>
+        public bool HasChildren => _children.Count > 0;
+
+        /// <summary>
+        /// Состояние раскрытия группы
+        /// </summary>
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded != value)
+                {
+                    _isExpanded = value;
+                    OnPropertyChanged(nameof(IsExpanded));
+                }
+            }
+        }
 
         /// <summary>
         /// Изменение строки статус

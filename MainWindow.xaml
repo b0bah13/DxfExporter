@@ -339,25 +339,130 @@
                                   AutoGenerateColumns="False" 
                                   Grid.ColumnSpan="3" CanUserDeleteRows="False"
                                   ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF"
+                                  RowDetailsVisibilityMode="Visible"
                                   >
 
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
                                     <Setter Property="Background" 
                                             Value="{Binding RowColor}" />
+                                    <Setter Property="DetailsVisibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                            <Setter Property="DetailsVisibility" Value="Visible"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasChildren}" Value="False">
+                                            <Setter Property="DetailsVisibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
 
+                            <DataGrid.RowDetailsTemplate>
+                                <DataTemplate>
+                                    <Border Margin="18,0,0,0">
+                                        <DataGrid ItemsSource="{Binding Children}"
+                                                  AutoGenerateColumns="False"
+                                                  CanUserAddRows="False"
+                                                  CanUserDeleteRows="False"
+                                                  HeadersVisibility="None"
+                                                  BorderThickness="0">
+                                            <DataGrid.RowStyle>
+                                                <Style TargetType="{x:Type DataGridRow}">
+                                                    <Setter Property="Background"
+                                                            Value="{Binding RowColor}" />
+                                                </Style>
+                                            </DataGrid.RowStyle>
+                                            <DataGrid.Columns>
+                                                <DataGridCheckBoxColumn Header="Выгрузить"
+                                                                        Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}"
+                                                                        Width="0.66*" />
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}"
+                                                                    Binding="{Binding PartNumber}"
+                                                                    Width="2.8*"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}"
+                                                                    Binding="{Binding Description}"
+                                                                    Width="1.8*"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Исполнение}"
+                                                                    Binding="{Binding MemberName}"
+                                                                    Width="1.2*"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}"
+                                                                    Binding="{Binding Material}"
+                                                                    Width="0.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}"
+                                                                    Binding="{Binding Thickness}"
+                                                                    Width="0.58*"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}"
+                                                                    Binding="{Binding Quantity}"
+                                                                    Width="0.5*"/>
+                                                <DataGridTextColumn Header="Свойства выгрузки"
+                                                                    Binding="{Binding UnloadProp}"
+                                                                    Width="1.15*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="Статус"
+                                                                    Binding="{Binding Status}"
+                                                                    Width="*" IsReadOnly="True" >
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="TextBlock.TextWrapping" Value="Wrap" />
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGrid.RowDetailsTemplate>
+
                             <DataGrid.Columns>
+                                <DataGridTemplateColumn Width="0.3*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <ToggleButton IsChecked="{Binding IsExpanded}"
+                                                          Width="16" Height="16"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalContentAlignment="Center"
+                                                          VerticalContentAlignment="Center">
+                                                <ToggleButton.Style>
+                                                    <Style TargetType="ToggleButton">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                        <Setter Property="Content" Value="+"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding HasChildren}" Value="True">
+                                                                <Setter Property="Visibility" Value="Visible"/>
+                                                            </DataTrigger>
+                                                            <Trigger Property="IsChecked" Value="True">
+                                                                <Setter Property="Content" Value="−"/>
+                                                            </Trigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ToggleButton.Style>
+                                            </ToggleButton>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridCheckBoxColumn Header="Выгрузить" 
                                                         Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}"
-                                                        Width="0.66*" />
+                                                        Width="0.66*" >
+                                    <DataGridCheckBoxColumn.ElementStyle>
+                                        <Style TargetType="CheckBox">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsGroup}" Value="True">
+                                                    <Setter Property="IsEnabled" Value="False"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </DataGridCheckBoxColumn.ElementStyle>
+                                </DataGridCheckBoxColumn>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}"
                                                     Binding="{Binding PartNumber}"
                                                     Width="2.8*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}"
                                                     Binding="{Binding Description}"
                                                     Width="1.8*"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Исполнение}"
+                                                    Binding="{Binding MemberName}"
+                                                    Width="1.2*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}"
                                                     Binding="{Binding Material}"
                                                     Width="0.8*" IsReadOnly="True"/>
