@@ -255,6 +255,9 @@ namespace DxfExporter.Scanning
                     // Если компонент является сборкой, рекурсивно проверяем её
                     if (compOcc.Definition.Document.DocumentType == (int)DocumentTypeEnum.kAssemblyDocumentObject)
                     {
+                        //Пропускать сварные сборки
+                        if (compOcc.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
+
                         if (HasMissingReferences(compOcc.Definition.Document as AssemblyDocument))
                             return true;
                     }
@@ -284,6 +287,9 @@ namespace DxfExporter.Scanning
                 foreach (var occ in asm.ComponentDefinition.Occurrences.Cast<ComponentOccurrence>()
                              .Where(occ => occ.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject))
                 {
+                    //Пропускать сварные сборки
+                    if (occ.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
+                    
                     CountRecursive((AssemblyDocument)occ.Definition.Document);
                 }
             }
@@ -340,6 +346,9 @@ namespace DxfExporter.Scanning
                     // проверяем сборка или деталь
                     if (componentOccurrence.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject)
                     {
+                        //Пропускать сварные сборки
+                        if (componentOccurrence.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
+
                         AssemblyDocument asmDoc = componentOccurrence.Definition.Document;
                         // пропускаем сборку если в ней нет деталей
                         if (asmDoc.ComponentDefinition.Occurrences.Count == 0)
