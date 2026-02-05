@@ -186,17 +186,7 @@ namespace DxfExporter.Export_Dxf
                         continue;
                     }
 
-                    //PartDocument pDoc;
                     bool wasOpened = false;
-                    //try
-                    //{
-                    //    pDoc = (PartDocument)ctx.InvApp.Documents.ItemByName[fileStructure.Path];
-                    //}
-                    //catch
-                    //{
-                    //    pDoc = ctx.InvApp.Documents.Open(fileStructure.Path, true) as PartDocument;
-                    //    wasOpened = true;
-                    //}
 
                     PartDocument pDoc = GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
                     if (pDoc == null)
@@ -238,13 +228,7 @@ namespace DxfExporter.Export_Dxf
 
                         //Получение структуры папок
                         string subDir = CreateDirStructure();
-
                         if (!Directory.Exists(subDir)) Directory.CreateDirectory(subDir);
-                        //Создание структуры папок
-                        //foreach (var se in exportDirList.Where(se => !Directory.Exists(se)))
-                        //{
-                          //  Directory.CreateDirectory(se);
-                        //}
 
                         //Получение имени файла из выбранной маски выгрузки
                         string fileName = ApplyMask(ctx.MaskData, fileStructure) + ".dxf";
@@ -262,14 +246,12 @@ namespace DxfExporter.Export_Dxf
                         //внутренний метод для создания структуры папок
                         string CreateDirStructure ()
                         {
-                            //List<string> dirList = new List<string>() { exportDir };
                             string dir = exportDir;
 
                             //Создание структуры папок в папке dxf
                             //если выгрузка в шаблоны
                             if (fileStructure.UnloadInTemplate)
                             {
-                                //dirList[0] = Path.Combine(dirList[0], "Шаблоны");
                                 dir = Path.Combine(dir, "Шаблоны");
                             }
 
@@ -277,16 +259,6 @@ namespace DxfExporter.Export_Dxf
                             if (ctx.FolderSettings.SubFolderMaterials)
                             {
                                 dir = Path.Combine(dir, fileStructure.Material);
-
-                                //проверяем есть ли дополнительный материал
-                                //int countMat = fileStructure.AddMaterial.Count;
-                                //if (countMat != 0)
-                                //{
-                                //    for (int i = 0; i < countMat; i++)
-                                //    {
-                                //        dirList.Add(Path.Combine(exportDir, fileStructure.AddMaterial[i]));
-                                //    }
-                                //}
                             }
 
                             //если нужно создать подпапку толщина
@@ -294,7 +266,6 @@ namespace DxfExporter.Export_Dxf
                             {
                                 string thick = $"{fileStructure.Thickness} мм";
                                 dir = Path.Combine(dir, thick);
-                                //dirList = dirList.Select(path => Path.Combine(path, thick)).ToList();
                             }
 
                             return dir;

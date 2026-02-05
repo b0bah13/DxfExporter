@@ -88,7 +88,92 @@ namespace DxfExporter
             SizeChanged += MainWindow_SizeChanged;
             SourceInitialized += MainWindow_SourceInitialized;
         }
+        
+        #region Обработка кастомного заголовка
 
+        /// <summary>
+        /// Для обработки кастомного заголовка
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void DragWindow(object sender, MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == MouseButton.Left)
+            {
+                if (e.ClickCount == 2)
+                {
+                    Maximize_Click(sender, e);
+                    return;
+                }
+
+                DragMove();
+            }
+        }
+
+        /// <summary>
+        /// Для закрытия кастомного заголовка
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        //private void CloseClick(object sender, RoutedEventArgs e) => Close();
+        private void CloseClick(object sender, RoutedEventArgs e)
+        {
+            // Отменяем операцию при закрытии окна
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
+
+            if (InventorHost.Instance.IsValueCreated && InventorHost.Instance.Value.IsInitialized)
+            {
+                InventorHost.Instance.Value.Dispose(); // Вызываем Dispose только если Inventor был инициализирован
+            }
+
+            Close();
+        }
+
+        /// <summary>
+        /// Свернуть
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        /// <summary>
+        /// Развернуть
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Maximize_Click(object sender, RoutedEventArgs e)
+        {
+            switch (WindowState)
+            {
+                case WindowState.Maximized:
+                    MaximizeButton.Content = "⬜";
+                    MaximizeButton.ToolTip = "Развернуть";
+                    WindowState = WindowState.Normal;
+                    break;
+                case WindowState.Normal:
+                    MaximizeButton.Content = "❐";
+                    MaximizeButton.ToolTip = "Свернуть в окно";
+                    WindowState = WindowState.Maximized;
+                    break;
+            }
+
+        }
+
+        /// <summary>
+        /// Окно с информацией о программе
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void InfoClick(object sender, RoutedEventArgs e)
+        {
+            StartTour();
+        }
+        
         #region Корректная максимизация окна с WindowStyle=None
 
         /// <summary>
@@ -215,91 +300,6 @@ namespace DxfExporter
 
         #endregion
 
-        #region Обработка кастомного заголовка
-
-        /// <summary>
-        /// Для обработки кастомного заголовка
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void DragWindow(object sender, MouseButtonEventArgs e)
-        {
-            if (e.ChangedButton == MouseButton.Left)
-            {
-                if (e.ClickCount == 2)
-                {
-                    Maximize_Click(sender, e);
-                    return;
-                }
-
-                DragMove();
-            }
-        }
-
-        /// <summary>
-        /// Для закрытия кастомного заголовка
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        //private void CloseClick(object sender, RoutedEventArgs e) => Close();
-        private void CloseClick(object sender, RoutedEventArgs e)
-        {
-            // Отменяем операцию при закрытии окна
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
-
-            if (InventorHost.Instance.IsValueCreated && InventorHost.Instance.Value.IsInitialized)
-            {
-                InventorHost.Instance.Value.Dispose(); // Вызываем Dispose только если Inventor был инициализирован
-            }
-
-            Close();
-        }
-
-        /// <summary>
-        /// Свернуть
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Minimize_Click(object sender, RoutedEventArgs e)
-        {
-            WindowState = WindowState.Minimized;
-        }
-
-        /// <summary>
-        /// Развернуть
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Maximize_Click(object sender, RoutedEventArgs e)
-        {
-            switch (WindowState)
-            {
-                case WindowState.Maximized:
-                    MaximizeButton.Content = "⬜";
-                    MaximizeButton.ToolTip = "Развернуть";
-                    WindowState = WindowState.Normal;
-                    break;
-                case WindowState.Normal:
-                    MaximizeButton.Content = "❐";
-                    MaximizeButton.ToolTip = "Свернуть в окно";
-                    WindowState = WindowState.Maximized;
-                    break;
-            }
-
-        }
-
-        /// <summary>
-        /// Окно с информацией о программе
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void InfoClick(object sender, RoutedEventArgs e)
-        {
-            StartTour();
-        }
-        
         #endregion
 
         #region Обработчик кнопок, нажатий клавиш
