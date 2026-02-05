@@ -330,7 +330,7 @@ namespace DxfExporter.Export_Dxf
                             string bendDownLayerName = "IV_BEND_DOWN";
 
                             string commonLineType = "37633";         // Continuous (сплошная)
-                            string dashedLineType = "37634";         // Можно поменять на штриховой, если нужно (например 37634 или другой код)
+                            string dashedLineType = "37633";         // Можно поменять на штриховой, если нужно (например 37634 или другой код)
 
                             string commonLineWeight = "0,0500";        // 0.05 мм
 
@@ -502,8 +502,7 @@ namespace DxfExporter.Export_Dxf
 
             return openedDoc;
         }
-
-
+        
         /// <summary>
         /// Проверяет путь к файлу и создаёт нужную структуру папок для DXF в зависимости от наличия "_Модель" или "Модель" в пути.
         /// </summary>
@@ -589,9 +588,9 @@ namespace DxfExporter.Export_Dxf
                 {
                     drawingsDir = dialog.ResultPath; //присваивает строке выделенную папку
                 }
-                else //в случае отмены выходим
+                else //в случае отмены возвращаем стандартную папку
                 {
-                    return "Выберите папку";
+                    return CheckDrawDirect(filePath);
                 }
             }
 

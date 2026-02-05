@@ -63,7 +63,7 @@ namespace DxfExporter
         public MainWindow()
         {
             InitializeComponent();
-            
+
             //DataContext = this;
             DataContext = MaskVm; 
             AppVersion = GetAppVersion();   // или просто присвоить строку
@@ -85,7 +85,7 @@ namespace DxfExporter
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
         }
-        
+
         #region Обработка кастомного заголовка
 
         /// <summary>
@@ -128,11 +128,21 @@ namespace DxfExporter
             Close();
         }
 
+        /// <summary>
+        /// Свернуть
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Minimize_Click(object sender, RoutedEventArgs e)
         {
             WindowState = WindowState.Minimized;
         }
 
+        /// <summary>
+        /// Развернуть
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Maximize_Click(object sender, RoutedEventArgs e)
         {
             switch (WindowState)
