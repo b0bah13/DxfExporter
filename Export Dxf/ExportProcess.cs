@@ -206,10 +206,6 @@ namespace DxfExporter.Export_Dxf
 
                     try
                     {
-                        //TODO
-                        //test
-                        //if (fileStructure.DisplayName.Contains("ребро",StringComparison.CurrentCultureIgnoreCase)) throw new("Test");
-                        //
                         //Если деталь через состояние, то нужно переключить на состояние которое было отсканировано
                         if (fileStructure.IsModelStatePart)
                         {

@@ -783,7 +783,6 @@ namespace DxfExporter
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
 
-            // TODO: Добавить будущие элементы в тур:
             // _tourSteps.Add(new TourStep { Tab = HomeTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
             // _tourSteps.Add(new TourStep { Tab = SettingsTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
         }

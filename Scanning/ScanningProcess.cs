@@ -288,6 +288,9 @@ namespace DxfExporter.Scanning
                 foreach (var occ in asm.ComponentDefinition.Occurrences.Cast<ComponentOccurrence>()
                              .Where(occ => occ.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject))
                 {
+                    if (occ.Excluded || occ.Suppressed) continue;
+                    if (occ.ReferencedDocumentDescriptor is { ReferenceMissing: true }) continue;
+
                     //Пропускать сварные сборки
                     if (occ.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
                     
@@ -339,7 +342,7 @@ namespace DxfExporter.Scanning
                     }
 
                     // пропустить детали с потерянными ссылками
-                    if (componentOccurrence.ReferencedDocumentDescriptor.ReferenceMissing)
+                    if (componentOccurrence.ReferencedDocumentDescriptor is { ReferenceMissing: true })
                     {
                         _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
