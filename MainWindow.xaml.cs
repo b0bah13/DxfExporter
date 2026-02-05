@@ -5,11 +5,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using DxfExporter.Constants;
@@ -84,7 +86,134 @@ namespace DxfExporter
 
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
+            SourceInitialized += MainWindow_SourceInitialized;
         }
+
+        #region Корректная максимизация окна с WindowStyle=None
+
+        /// <summary>
+        /// Добавляет WinAPI-хук после создания HWND, чтобы корректно обрабатывать размеры
+        /// окна при разворачивании на любом мониторе.
+        /// </summary>
+        private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+        {
+            if (PresentationSource.FromVisual(this) is HwndSource source)
+            {
+                source.AddHook(WndProc);
+            }
+        }
+
+        /// <summary>
+        /// Обрабатывает оконные сообщения и перехватывает запрос на расчет габаритов
+        /// максимизированного окна.
+        /// </summary>
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WmGetMinMaxInfoMessage)
+            {
+                WmGetMinMaxInfo(hwnd, lParam);
+                handled = true;
+            }
+
+            return IntPtr.Zero;
+        }
+
+        /// <summary>
+        /// Ограничивает размеры максимизированного окна рабочей областью монитора
+        /// (без перекрытия панели задач).
+        /// </summary>
+        private static void WmGetMinMaxInfo(IntPtr hwnd, IntPtr lParam)
+        {
+            var minMaxInfo = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+
+            IntPtr monitor = MonitorFromWindow(hwnd, MonitorDefaultToNearest);
+            if (monitor != IntPtr.Zero)
+            {
+                var monitorInfo = new MONITORINFO();
+                GetMonitorInfo(monitor, monitorInfo);
+
+                RECT workArea = monitorInfo.rcWork;
+                RECT monitorArea = monitorInfo.rcMonitor;
+
+                minMaxInfo.ptMaxPosition.X = Math.Abs(workArea.Left - monitorArea.Left);
+                minMaxInfo.ptMaxPosition.Y = Math.Abs(workArea.Top - monitorArea.Top);
+                minMaxInfo.ptMaxSize.X = Math.Abs(workArea.Right - workArea.Left);
+                minMaxInfo.ptMaxSize.Y = Math.Abs(workArea.Bottom - workArea.Top);
+            }
+
+            Marshal.StructureToPtr(minMaxInfo, lParam, true);
+        }
+
+        /// <summary>
+        /// Идентификатор сообщения WM_GETMINMAXINFO.
+        /// </summary>
+        private const int WmGetMinMaxInfoMessage = 0x0024;
+
+        /// <summary>
+        /// Флаг получения ближайшего монитора для заданного окна.
+        /// </summary>
+        private const int MonitorDefaultToNearest = 0x00000002;
+
+        /// <summary>
+        /// Получает дескриптор монитора, на котором размещено окно.
+        /// </summary>
+        [DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromWindow(IntPtr handle, int flags);
+
+        /// <summary>
+        /// Заполняет структуру с информацией о мониторе и рабочей области.
+        /// </summary>
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool GetMonitorInfo(IntPtr hMonitor, MONITORINFO lpmi);
+
+        /// <summary>
+        /// Структура WinAPI точки (X, Y).
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        /// <summary>
+        /// Структура WinAPI с ограничениями размеров/позиции окна.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
+
+        /// <summary>
+        /// Структура WinAPI с границами монитора и рабочей области.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private class MONITORINFO
+        {
+            public int cbSize = Marshal.SizeOf(typeof(MONITORINFO));
+            public RECT rcMonitor = new RECT();
+            public RECT rcWork = new RECT();
+            public int dwFlags;
+        }
+
+        /// <summary>
+        /// Структура WinAPI прямоугольника.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential, Pack = 0)]
+        private struct RECT
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+        #endregion
 
         #region Обработка кастомного заголовка
 
