@@ -231,11 +231,7 @@ namespace DxfExporter.Export_Dxf
 
                         //провести сверку материала и толщины - речь про нержу 0,7 => 0,8
                         CheckAisiThick();
-
-                        //TODO:
-                        // внедрить проверку габарита развёртки, важно! после CheckAisiThick
-                        //_mainWindow.UpdateLog(ctx.CheckSettings.PathTable, false);
-
+                        
                         //Получение структуры папок
                         string subDir = CreateDirStructure();
                         if (!Directory.Exists(subDir)) Directory.CreateDirectory(subDir);
@@ -246,6 +242,10 @@ namespace DxfExporter.Export_Dxf
                         //учесть настройки выгрузки - без гравировки, с линиями гиба, все исполнения (пока не трогать)
                         //Выгрузить dxf
                         ExportDxf();
+                        
+                        //TODO:внедрить проверку габарита развёртки, важно! после CheckAisiThick
+                        //Проверка габарита развёртки
+                        //_mainWindow.UpdateLog(ctx.CheckSettings.PathTable, false);
 
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
