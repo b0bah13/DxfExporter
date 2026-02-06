@@ -64,13 +64,18 @@ namespace DxfExporter.Export_Dxf
         public ExportSettings FolderSettings { get; }
 
         /// <summary>
+        /// Настройки проверки габарита развёртки
+        /// </summary>
+        public CheckFileSettings CheckSettings { get; }
+
+        /// <summary>
         /// Кол-во выгружаемых файлов
         /// </summary>
         public int UnloadCount { get; }
 
         public ExportContext(Inventor.Application invApp, ObservableCollection<StructureClass> procData,
             ObservableCollection<MaskPart> maskData, string modeName, CancellationToken cancellationToken,
-            string scanFilePath, ExportSettings folderSettings, int unloadCount)
+            string scanFilePath, ExportSettings folderSettings, CheckFileSettings checkSettings, int unloadCount)
         {
             InvApp = invApp ?? throw new ArgumentNullException(nameof(invApp));
             ProcData = procData ?? throw new ArgumentNullException(nameof(procData));
@@ -79,6 +84,7 @@ namespace DxfExporter.Export_Dxf
             CancellationToken = cancellationToken;
             ScanFilePath = scanFilePath;
             FolderSettings = folderSettings;
+            CheckSettings = checkSettings;
             UnloadCount = unloadCount;
         }
     }
@@ -122,12 +128,12 @@ namespace DxfExporter.Export_Dxf
         /// <param name="maskData">Маска/фильтры выгрузки</param>
         public async Task<string> StartProcessExport(CancellationToken cancellationToken, ObservableCollection<StructureClass> procData,
             ObservableCollection<MaskPart> maskData, string modeName, string scanFilePath, ExportSettings folderSettings,
-            int unloadCount)
+            CheckFileSettings checkSettings, int unloadCount)
         {
             return await InventorHost.Instance.Value.RunAsync(async invApp =>
             {
                 var context = new ExportContext(invApp, procData, maskData,
-                    modeName, cancellationToken, scanFilePath, folderSettings, unloadCount);
+                    modeName, cancellationToken, scanFilePath, folderSettings, checkSettings, unloadCount);
 
                 var dir = ExportProcessing(context);
 
@@ -156,7 +162,7 @@ namespace DxfExporter.Export_Dxf
             // Вызывает исключение, если приложение закрыли
             ctx.CancellationToken.ThrowIfCancellationRequested();
             string exportDir = String.Empty;
-
+            
             try
             {
                 // Проверка есть ли папка Чертежи
@@ -225,6 +231,10 @@ namespace DxfExporter.Export_Dxf
 
                         //провести сверку материала и толщины - речь про нержу 0,7 => 0,8
                         CheckAisiThick();
+
+                        //TODO:
+                        // внедрить проверку габарита развёртки, важно! после CheckAisiThick
+                        //_mainWindow.UpdateLog(ctx.CheckSettings.PathTable, false);
 
                         //Получение структуры папок
                         string subDir = CreateDirStructure();
@@ -399,7 +409,7 @@ namespace DxfExporter.Export_Dxf
                 _mainWindow.SelectAndScrollToItem();
                 _mainWindow.SetProgress(100);
                 _mainWindow.UpdateLog("====================\n", false);
-                
+
                 WriteReport.StartWriteReport(ctx.InvApp.UserName);
             }
             catch (Exception ex)

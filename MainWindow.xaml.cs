@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,27 +21,34 @@ using DxfExporter.MaskProcess;
 using DxfExporter.Scanning;
 using DxfExporter.Versions;
 using Inventor;
+using Microsoft.Win32;
 using static System.Net.Mime.MediaTypeNames;
 using Environment = System.Environment;
 using Point = System.Windows.Point;
+using TextBox = System.Windows.Controls.TextBox;
 
 namespace DxfExporter
 {
     public partial class MainWindow : Window
     {
         #region Объявление переменных
-
+        
+        const string defaultPathTable = @"K:\Документы\Инструкции\Автоматизация процессов\Таблица соответствия.xlsx";
+        
         private CancellationTokenSource _cts;
-        public StateWithMessage CheckExit = new StateWithMessage { };
         private ScanResult _scanResult;
         private readonly InventorHost _host = InventorHost.Instance.Value;
-        public string _scanFilePath;
-        public MaskEditorViewModel MaskVm { get; } = new MaskEditorViewModel();
-        public ExportSettings FolderSettings = new ExportSettings();
-        public string AppVersion { get; private set; }
         private readonly List<TourStep> _tourSteps = new();
         private int _tourIndex;
         private bool _isTourActive;
+
+        public string AppVersion { get; private set; }
+        public string _scanFilePath,_exportDir;
+
+        public MaskEditorViewModel MaskVm { get; } = new MaskEditorViewModel();
+        public StateWithMessage CheckExit = new StateWithMessage { };
+        public ExportSettings FolderSettings = new ExportSettings();
+        public CheckFileSettings CheckSettings = new CheckFileSettings();
 
         /// <summary>
         /// Перечисление для указания источника вызова. 
@@ -58,6 +66,11 @@ namespace DxfExporter
             public bool UserDxfDir { get; set; } = false;
         }
 
+        public class CheckFileSettings
+        { 
+            public bool CheckGab { get; set; } = true;
+            public string PathTable { get; set; } = String.Empty;
+        }
 
         #endregion
 
@@ -67,7 +80,8 @@ namespace DxfExporter
             InitializeComponent();
 
             //DataContext = this;
-            DataContext = MaskVm; 
+            DataContext = MaskVm;
+            TablePath.Text = defaultPathTable;
             AppVersion = GetAppVersion();   // или просто присвоить строку
 
             UpdateTooltip();
@@ -302,7 +316,7 @@ namespace DxfExporter
 
         #endregion
 
-        #region Обработчик кнопок, нажатий клавиш
+        #region Обработчик кнопок, нажатий клавиш, полей
         
         /// <summary>
         /// Кнопка сканирования
@@ -389,6 +403,71 @@ namespace DxfExporter
         {
             MessageBox.Show(Versions.VersionHistory.GetFullHistory(),
                 "Информация об обновлениях", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        /// <summary>
+        /// Обработка строки таблицы соответствия
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TablePath_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox? tBox = sender as TextBox;
+
+            switch (tBox?.Name)
+            {
+                case "TablePath":
+                    TextBoxProc(tBox, defaultPathTable);
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// Кнопка обзор
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void browseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Button? button = sender as Button;
+
+            switch (button?.Name)
+            {
+                case "browseButton":
+                    TablePath.Text = SelectExcel(@"K:\Документы\Инструкции\Автоматизация процессов\");
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Обработка чекбокса проверки габарита
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void checkGab_Checked(object sender, RoutedEventArgs e)
+        {
+            var checkBox = sender as CheckBox;
+
+            switch (checkBox.Name)
+            {
+                case "checkGab":
+                    CheckSettings.CheckGab = checkGab.IsChecked == true;
+                    break;
+            }
+
+            UpdateTooltip();
+        }
+
+        /// <summary>
+        /// Открывает папку
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void openButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(string.IsNullOrEmpty(_exportDir)) return;
+            if(!System.IO.Path.Exists(_exportDir))return;
+            Process.Start("explorer.exe", $"\"{_exportDir}\"");
         }
 
         #region Обработка выборка маски выгрузки
@@ -856,6 +935,13 @@ namespace DxfExporter
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
+                Target = openButton,
+                Title = "Открыть папку",
+                Description = "Открывает папку с выгруженными развёртками."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
                 Target = searchBox,
                 Title = "Поиск",
                 Description = "Введите текст, чтобы отфильтровать таблицу по выбранному столбцу."
@@ -906,6 +992,13 @@ namespace DxfExporter
                 Target = categorizeThickness,
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по толщинам."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = gbCheckGab,
+                Title = "Проверка развёртки",
+                Description = "Включает проверку развёртки при выгрузке.\nДанные по листам берутся из 'Таблицы соответствия'."
             });
             _tourSteps.Add(new TourStep
             {
@@ -1044,7 +1137,7 @@ namespace DxfExporter
             TourDescriptionText.Width = target.Name == "scanData" ? 400 : 260;
 
             // Подбираем позицию подсказки рядом с элементом и удерживаем её в пределах оверлея.
-            TourTooltipBorder.Measure(new Size(300, double.PositiveInfinity));
+            TourTooltipBorder.Measure(new System.Windows.Size(300, double.PositiveInfinity));
             var tooltipSize = TourTooltipBorder.DesiredSize;
             var tooltipLeft = targetRect.Right + 12;
             if (tooltipLeft + tooltipSize.Width > overlayRect.Right)
@@ -1207,8 +1300,8 @@ namespace DxfExporter
 
 
                 ExportProcess _export = new ExportProcess(this);
-                string exportDir = await _export.StartProcessExport(_cts.Token, procData, maskData, modeName,
-                    _scanFilePath, FolderSettings, unloadCount);
+                _exportDir = await _export.StartProcessExport(_cts.Token, procData, maskData, modeName,
+                    _scanFilePath, FolderSettings, CheckSettings, unloadCount);
 
                 if (CheckExit.NeedExit)
                 {
@@ -1217,23 +1310,6 @@ namespace DxfExporter
                 }
 
                 txtStatus.Text = "Выгрузка Dxf завершена";
-
-                MessageBoxResult userResult = MessageBoxResult.None;
-                Dispatcher.Invoke(() =>
-                {
-                    userResult = MessageBox.Show(this,
-                        $"Выгрузка Dxf успешно завершена.\nОткрыть папку?",
-                        "Готово",
-                        MessageBoxButton.YesNo, MessageBoxImage.Question);
-                });
-
-                if (userResult == MessageBoxResult.Yes)
-                {
-                    //Process.Start("explorer.exe", exportDir);
-                    // Запуск explorer.exe с путём в кавычках для обработки пробелов и спецсимволов.
-                    Process.Start("explorer.exe", $"\"{exportDir}\"");
-                }
-
             }
             catch (Exception ex)
             {
@@ -1429,55 +1505,6 @@ namespace DxfExporter
                 Debug.WriteLine(e.StackTrace);
             }
         }
-
-
-        /// <summary>
-        /// Добавляет материал в выбранных строках
-        /// </summary>
-        /// <param name="selected">Выбранные строки</param>
-        private async void AddMaterial_old(List<StructureClass> selected)
-        {
-            try
-            {
-                var materialList = await GetMaterialNamesAsync();
-
-                if (materialList.Count == 0)
-                {
-                    MessageBox.Show("Не удалось получить список материалов из Inventor");
-                    return;
-                }
-
-                // выбор материала пользователем
-                var wpfWin = new MaterialSelection(materialList, "Выберите материал для добавления:", 
-                    SelectionMode.Multiple);
-                if (wpfWin.ShowDialog() != true) { return; }
-
-                var choiceResult = wpfWin.SelectedMaterials;
-                if (choiceResult == null) { return; }
-
-                //добавление производится относительно первого выбранного элемента
-                //var first = scanData.SelectedItems[0] as StructureClass;
-                //var resultMaterial = string.Join(";", new[] { first.Material }.Concat(choiceResult));
-                var addMaterial = string.Join("; ", choiceResult);
-
-                foreach (StructureClass structureClass in selected)
-                {
-                    //structureClass.AddMaterial = choiceResult;
-                    //structureClass.Material = resultMaterial;
-
-                    //если строка состояния не пустая, то добавить перенос
-                    if (!string.IsNullOrWhiteSpace(structureClass.Status))
-                    {
-                        structureClass.Status += "\n";
-                    }
-                    structureClass.Status += $"Добавлен материал: {addMaterial}";
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.StackTrace);
-            }
-        }
         
         /// <summary>
         /// Получение списка материалов из Inventor
@@ -1516,6 +1543,67 @@ namespace DxfExporter
                 return new List<string>();
             }
         }
+
+
+        /// <summary>
+        /// Обработка логики в текстовом поле
+        /// </summary>
+        /// <param name="tBox"></param>
+        /// <param name="defpath"></param>
+        /// <param name="path"></param>
+        private void TextBoxProc(TextBox tBox, string defpath)
+        {
+            if (string.IsNullOrEmpty(tBox.Text))
+            {
+                tBox.Text = defpath;
+                return;
+            }
+
+            if (!System.IO.File.Exists(tBox.Text))
+            {
+                MessageBox.Show("Указанного файла не существует!\nБудет выбран файл по умолчанию.",
+                    "Ошибка выбора файла", MessageBoxButton.OK, MessageBoxImage.Error);
+                tBox.Text = defpath;
+            }
+            else
+            {
+                CheckSettings.PathTable = tBox.Text;
+            }
+        }
+
+        /// <summary>
+        /// Выбор файла Excel
+        /// </summary>
+        /// <param name="initialDirectory">Первичная папка поиска</param>
+        /// <returns></returns>
+        private string SelectExcel(string initialDirectory)
+        {
+            string originalText = TablePath.Text;
+
+            // Создаем экземпляр OpenFileDialog
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+
+            // Устанавливаем начальный каталог
+            openFileDialog.InitialDirectory = initialDirectory;
+
+            // Устанавливаем фильтр для отображения только Excel-файлов
+            openFileDialog.Filter = "Все файлы Excel (*.xlsx;*.xlsm;*.xls)|*.xlsx;*.xlsm;*.xls";
+
+            openFileDialog.Multiselect = false;
+
+            // Устанавливаем заголовок окна
+            openFileDialog.Title = "Выберите Excel файл";
+
+            // Показываем диалоговое окно и проверяем результат
+            string filePath = openFileDialog.ShowDialog() == true
+                ?
+                // Получаем выбранный путь к файлу
+                openFileDialog.FileName
+                : originalText;
+
+            return filePath;
+        }
+
 
         #endregion
 
@@ -1793,6 +1881,13 @@ namespace DxfExporter
                 categorizeThickness.ToolTip = categorizeThickness?.IsChecked == true
                     ? "Будет создана подпапка с толщиной"
                     : "Не будет создана подпапка с толщиной";
+            }
+
+            if (checkGab != null)
+            {
+                checkGab.ToolTip = checkGab?.IsChecked == true
+                    ? "При создании dxf будет проверен габарит развёртки" //Включено: 
+                    : "Габарит развёртки проверятся не будет"; //Выключено
             }
 
         }
