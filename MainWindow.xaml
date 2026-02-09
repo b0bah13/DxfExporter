@@ -284,31 +284,98 @@
                             <RowDefinition Height="*"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <Button x:Name="scanButton" Width="80" Height="80" 
+                        <Grid Grid.ColumnSpan="3" Margin="5,5,5,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="scanButton" Width="80" Height="80" 
                             Style="{StaticResource SmallButtonStyle}"
                             ToolTip="Сканировать сборку/деталь" 
                             ToolTipService.InitialShowDelay="400"
-                            HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,5,5,5" Click="scanButton_Click">
-                            <StackPanel Height="75" Width="75">
-                                <Image Source="/binoculars.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                                <TextBlock TextWrapping="Wrap" Text="Сканировать" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                            HorizontalAlignment="Left" VerticalAlignment="Center" Click="scanButton_Click">
+                                <StackPanel Height="75" Width="75">
+                                    <Image Source="/binoculars.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                                    <TextBlock TextWrapping="Wrap" Text="Сканировать" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
 
+                                </StackPanel>
+
+                            </Button>
+                            <Rectangle Grid.Column="1"
+                                       Width="1"
+                                       Fill="#FFADADAD"
+                                       StrokeThickness="0" Margin="5,2,5,2" />
+                            <StackPanel Grid.Column="2">
+                                <Button x:Name="addOpenFilesButton" Width="95" Height="37.5" 
+                                    Style="{StaticResource SmallButtonStyle}"
+                                    ToolTip="Добавить открытые файлы" 
+                                    ToolTipService.InitialShowDelay="400" Click="addOpenFilesButton_Click">
+                                    <Grid Width="85">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Image Source="/add-file.png" Width="25" HorizontalAlignment="Center"/>
+                                        <TextBlock TextWrapping="Wrap" Text="Добавить" TextAlignment="Center" Margin="5,0,0,0" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+
+                                    </Grid>
+
+                                </Button>
+                                <Button x:Name="choiceFilesButton" Width="95" Height="37.5" 
+                                    Style="{StaticResource SmallButtonStyle}"
+                                    ToolTip="Выбрать файлы из папки" 
+                                    ToolTipService.InitialShowDelay="400" Click="choiceFilesButton_Click" Margin="0,5,0,0" HorizontalContentAlignment="Center">
+                                    <Grid Width="85">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Image Source="/Open-folder-add.png" Width="25" 
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        <TextBlock TextWrapping="Wrap" Text="Выбрать" 
+                                                   TextAlignment="Center" VerticalAlignment="Center" 
+                                                   Margin="5,0,0,0" Grid.Column="1" 
+                                                   HorizontalAlignment="Left"/>
+
+                                    </Grid>
+
+                                </Button>
                             </StackPanel>
+                            <Rectangle Grid.Column="3"
+                                Width="1"
+                                Fill="#FFADADAD"
+                                StrokeThickness="0" Margin="5,2,5,2" />
+                            <Button x:Name="clearListButton" Width="80" Height="80" 
+                                Style="{StaticResource SmallButtonStyle}"
+                                ToolTip="Очистить список"
+                                ToolTipService.InitialShowDelay="400"
+                                HorizontalAlignment="Center" VerticalAlignment="Center" 
+                                Click="clearListButton_Click" Grid.Column="4">
+                                <StackPanel Height="75" Width="75">
+                                    <Image Source="/refresh.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                                    <TextBlock TextWrapping="Wrap" Text="Очистить" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
 
-                        </Button>
-                        <Button x:Name="startButton" Width="80" Height="80" 
+                                </StackPanel>
+
+                            </Button>
+                            <Button x:Name="startButton" Width="80" Height="80" 
                             Style="{StaticResource SmallButtonStyle}"
-                            HorizontalAlignment="Left" VerticalAlignment="Center" Grid.Column="3" 
+                            HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Column="6" 
                             ToolTip="Выгрузить dxf выбранных файлов" 
-                            ToolTipService.InitialShowDelay="400"
-                            Margin="5,0,5,0" Click="startButton_Click">
-                            <StackPanel Height="75" Width="75">
-                                <Image Source="/dxf.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
-                                <TextBlock TextWrapping="Wrap" Text="Создать DXF" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+                            ToolTipService.InitialShowDelay="400" Click="startButton_Click">
+                                <StackPanel Height="75" Width="75">
+                                    <Image Source="/dxf.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                                    <TextBlock TextWrapping="Wrap" Text="Создать DXF" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
 
-                            </StackPanel>
+                                </StackPanel>
 
-                        </Button>
+                            </Button>
+                        </Grid>
                         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5,0,5,5" Grid.ColumnSpan="2">
                             <TextBox x:Name="searchBox" TextWrapping="Wrap" Width="300" 
                                      Style="{StaticResource TextBoxStyle}"
@@ -323,11 +390,11 @@
                                       ToolTip="Выбор столбца для поиска" 
                                       ToolTipService.InitialShowDelay="400"
                                       SelectedIndex="0" SelectionChanged="searchComboBox_SelectionChanged"/>
-                            <Button x:Name="clearButton" Content="Очистить"
+                            <Button x:Name="clearButton" Content="Сбросить"
                                     Style="{StaticResource SmallButtonStyle}"
                                     Click="clearButton_Click"
                                     HorizontalAlignment="Center" 
-                                    ToolTip="Очистка строки поиска"
+                                    ToolTip="Сбросить строку поиска"
                                     ToolTipService.InitialShowDelay="400"
                                     Margin="5,0,0,0" Width="70"/>
                         </StackPanel>
@@ -336,7 +403,7 @@
                             Click="openButton_Click" 
                             ToolTip="Открыть папку с выгруженными развёртками"
                             ToolTipService.InitialShowDelay="400"
-                            Width="NaN" Grid.Row="1" Grid.Column="2" Margin="5,0,5,5"/>
+                            Width="80" Grid.Row="1" Grid.Column="2" Margin="5,0,5,5"/>
 
                         <DataGrid x:Name="scanData" 
                                   d:ItemsSource="{d:SampleData ItemCount=5}" 
@@ -381,8 +448,8 @@
                                                     Width="*" IsReadOnly="True" >
                                     <!-- Включаем перенос текста в ячейке -->
                                     <DataGridTextColumn.ElementStyle>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="TextBlock.TextWrapping" Value="Wrap" />
+                                        <Style TargetType="{x:Type TextBlock}">
+                                            <Setter Property="TextWrapping" Value="Wrap" />
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
@@ -404,33 +471,41 @@
                                               IsCheckable="True"
                                               Checked="Menu_Checked_General"
                                               Unchecked="Menu_Unchecked_General"
+                                              ToolTip="Свойство указывающее будет ли выгружен DXF"
+                                              ToolTipService.InitialShowDelay="400"
                                               Tag="NeedUnload"/>
 
                                     <MenuItem Header="Гравировка"
                                               IsCheckable="True"
                                               Checked="Menu_Checked_General"
                                               Unchecked="Menu_Unchecked_General"
+                                              ToolTip="Свойство указывающее будет ли выгружена гравировка"
+                                              ToolTipService.InitialShowDelay="400"
                                               Tag="NeedGrav"/>
 
                                     <MenuItem Header="Линии гиба"
                                               Tag="NeedBendLine"
                                               IsCheckable="True"
                                               Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"/>
+                                              Unchecked="Menu_Unchecked_General"
+                                              ToolTip="Свойство указывающее будут ли выгружены линии гиба"
+                                              ToolTipService.InitialShowDelay="400"
+                                              />
 
                                     <MenuItem Header="Выгрузить в шаблон"
                                               Tag="UnloadInTemplate"
                                               IsCheckable="True"
                                               Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"/>
+                                              Unchecked="Menu_Unchecked_General"
+                                              ToolTip="Свойство указывающее будет ли выгружен DXF в папку 'Шаблоны'"
+                                              ToolTipService.InitialShowDelay="400"/>
+                                    <Separator/>
+                                    <MenuItem Header="Оставить выбранные"
+                                              Click="MenuItem_InvertCheck_Click"
+                                              ToolTip="Оставляет свойство 'Выгрузить' только у выбранных строк"
+                                              ToolTipService.InitialShowDelay="400"
+                                              />
 
-                                    <!-- 
-                                    <MenuItem Header="Выгрузить все исполнения"
-                                              Tag="UnloadAllVers"
-                                              IsCheckable="True"
-                                              Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"/>
-                                    -->
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
 
@@ -453,7 +528,7 @@
                             <StatusBarItem HorizontalAlignment="Right">
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="Версия:" Foreground="DimGray" VerticalAlignment="Center"/>
-                                    <TextBlock Text="{Binding AppVersion, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                    <TextBlock Text="{Binding AppVersion, RelativeSource={RelativeSource AncestorType={x:Type Window}}}" 
                                                Foreground="DimGray" VerticalAlignment="Center" 
                                                Margin="3,0,3,0"/>
                                     <Button Content="i" 

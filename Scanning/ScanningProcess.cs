@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using DxfExporter.Constants;
 using System.Windows.Controls;
+using static DxfExporter.MainWindow;
 
 namespace DxfExporter.Scanning
 {
@@ -38,16 +39,32 @@ namespace DxfExporter.Scanning
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<ScanResult> StartProcessingAsync(CancellationToken cancellationToken)
+        public async Task<ScanResult> StartProcessingAsync(CancellationToken cancellationToken, 
+            CallSource callSource, List<string> choiceFiles = null)
         {
-
             // Выполняем обработку в STA-потоке Inventor через InventorHost
             return await InventorHost.Instance.Value.RunAsync(async invApp =>
             {
                 _invApp = invApp;
+                ScanResult result = null;
+                string msgText = String.Empty;
 
                 // логика работы с Inventor
-                var result = DataProcessing(cancellationToken);
+                switch (callSource)
+                {
+                    case CallSource.Scan:
+                        result = DataProcessing(cancellationToken);
+                        msgText = "Сканирование не завершено!";
+                        break;
+                    case CallSource.AddOpen:
+                        result = AddProcessing(cancellationToken);
+                        msgText = "Не удалось добавить открытые файлы!";
+                        break;
+                    case CallSource.ChoiceInFolder:
+                        result = AddProcessing(cancellationToken, choiceFiles);
+                        msgText = "Не удалось добавить файлы из папки!";
+                        break;
+                }
 
                 //MessageBox.Show("Test");
 
@@ -55,7 +72,7 @@ namespace DxfExporter.Scanning
                 {
                     _mainWindow.Dispatcher.Invoke(() =>
                     {
-                        MessageBox.Show(_mainWindow.CheckExit.Message, "Сканирование не завершено!",
+                        MessageBox.Show(_mainWindow.CheckExit.Message, msgText,
                             MessageBoxButton.OK, MessageBoxImage.Stop);
                     });
                     return null;
@@ -567,6 +584,184 @@ namespace DxfExporter.Scanning
             }
         }
 
+
+        /// <summary>
+        /// Метод добавления файлов
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        private ScanResult AddProcessing(CancellationToken cancellationToken)
+        {
+            // Вызывает исключение, если приложение закрыли
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ScanResult result = new ScanResult();
+            string docFilePath = string.Empty;
+
+            try
+            {
+                //проходим по всем открытым видимым документам
+                foreach (var pDoc in 
+                         from _Document documentsVisibleDocument in _invApp.Documents.VisibleDocuments 
+                         where documentsVisibleDocument.DocumentType == DocumentTypeEnum.kPartDocumentObject 
+                         select (PartDocument)documentsVisibleDocument)
+                {
+                    // Вызывает исключение, если приложение закрыли
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    // Если нужно выйти
+                    if (_mainWindow.CheckExit.NeedExit)
+                    {
+                        _mainWindow.UpdateLog(_mainWindow.CheckExit.Message, false);
+                        return null;
+                    }
+
+                    // пропускаем многотельную деталь
+                    if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1)
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        continue;
+                    }
+
+                    // пропускаем не листовую деталь
+                    if (pDoc.SubType != SubType.ЛистоваяДеталь)
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        continue;
+                    }
+
+                    docFilePath = pDoc.FullFileName;
+                    if (string.IsNullOrEmpty(_mainWindow._scanFilePath))
+                    {
+                        _mainWindow._scanFilePath = docFilePath;
+                    }
+
+                    string modName = pDoc.ModelStateName;
+                    result.AddNode(ProcessPart(pDoc, modName));
+                }
+
+                _mainWindow.UpdateLog("====================\n", false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.StackTrace);
+                _mainWindow.CheckExit.NeedExit = true;
+                _mainWindow.CheckExit.Message = $"Ошибка при добавлении файла: {docFilePath}";
+                _mainWindow.CheckExit.SystemMessage = ex.StackTrace;
+                _mainWindow.CheckExit.UserName = _invApp.UserName;
+
+                List<string> infoList = new List<string>()
+                {
+                    $"\tПуть до файла: {docFilePath}",
+                    $"\t{ _mainWindow.CheckExit.Message}",
+                    $"\tПоследние логи:\n{_mainWindow.GetLinesAsText()}"
+                };
+                if (DateTime.UtcNow - _lastErrorEmailSent >= _emailCooldown)
+                {
+                    CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
+                    _lastErrorEmailSent = DateTime.UtcNow;  // фиксируем время отправки
+                }
+
+                //throw new InvalidOperationException(ex.Message,ex);
+            }
+            finally
+            {
+
+            }
+
+            return result;
+        }
         
+        /// <summary>
+        /// Метод добавления файлов
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <param name="choiceFiles">Выбранные пользователем файлы</param>
+        /// <returns></returns>
+        private ScanResult AddProcessing(CancellationToken cancellationToken, List<string> choiceFiles)
+        {
+            // Вызывает исключение, если приложение закрыли
+            cancellationToken.ThrowIfCancellationRequested();
+
+            ScanResult result = new ScanResult();
+            string docFilePath = string.Empty;
+
+            try
+            {
+                bool wasOpened = false;
+                // Проходим по всем файлам, которые пользователь выбрал
+                foreach (string filePath in choiceFiles)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    PartDocument pDoc = CommonOperations.GetOrOpenPartDocument(_invApp, filePath, out wasOpened);
+                    if (pDoc == null)
+                        throw new Exception("Не удалось получить PartDocument.");
+                    
+                    // Если нужно выйти
+                    if (_mainWindow.CheckExit.NeedExit)
+                    {
+                        _mainWindow.UpdateLog(_mainWindow.CheckExit.Message, false);
+                        return null;
+                    }
+                    
+                    // пропускаем многотельную деталь
+                    if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1)
+                    {
+                        pDoc.Close(SkipSave:true);
+                        _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        continue;
+                    }
+
+                    // пропускаем не листовую деталь
+                    if (pDoc.SubType != SubType.ЛистоваяДеталь)
+                    {
+                        pDoc.Close(SkipSave: true);
+                        _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        continue;
+                    }
+
+                    docFilePath = pDoc.FullFileName;
+                    if (string.IsNullOrEmpty(_mainWindow._scanFilePath))
+                    {
+                        _mainWindow._scanFilePath = docFilePath;
+                    }
+
+                    string modName = pDoc.ModelStateName;
+                    result.AddNode(ProcessPart(pDoc, modName));
+                }
+
+                _mainWindow.UpdateLog("====================\n", false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.StackTrace);
+                _mainWindow.CheckExit.NeedExit = true;
+                _mainWindow.CheckExit.Message = $"Ошибка при добавлении файла: {docFilePath}";
+                _mainWindow.CheckExit.SystemMessage = ex.StackTrace;
+                _mainWindow.CheckExit.UserName = _invApp.UserName;
+
+                List<string> infoList = new List<string>()
+                {
+                    $"\tПуть до файла: {docFilePath}",
+                    $"\t{ _mainWindow.CheckExit.Message}",
+                    $"\tПоследние логи:\n{_mainWindow.GetLinesAsText()}"
+                };
+                if (DateTime.UtcNow - _lastErrorEmailSent >= _emailCooldown)
+                {
+                    CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
+                    _lastErrorEmailSent = DateTime.UtcNow;  // фиксируем время отправки
+                }
+
+                //throw new InvalidOperationException(ex.Message,ex);
+            }
+            finally
+            {
+
+            }
+
+            return result;
+        }
+
     }
 }

@@ -10,21 +10,27 @@
 	  <Platforms>AnyCPU;x64</Platforms>
 	  <AssemblyName>Dxf Exporter</AssemblyName>
 	  <Description>Программа для получения Dxf развёрток из файлов Inventor</Description>
-	  <AssemblyVersion>1.0.0.0</AssemblyVersion>
+	  <AssemblyVersion>1.0.1.0</AssemblyVersion>
 	  <Version>1.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="add-file.png" />
     <None Remove="binoculars.png" />
     <None Remove="dxf.png" />
     <None Remove="logo_ZV1.png" />
+    <None Remove="Open-folder-add.png" />
+    <None Remove="refresh.png" />
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="add-file.png" />
     <Resource Include="binoculars.png" />
     <Resource Include="dxf-file.ico" />
     <Resource Include="dxf.png" />
     <Resource Include="logo_ZV1.png" />
+    <Resource Include="Open-folder-add.png" />
+    <Resource Include="refresh.png" />
   </ItemGroup>
 
   <ItemGroup>

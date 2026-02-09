@@ -194,7 +194,7 @@ namespace DxfExporter.Export_Dxf
 
                     bool wasOpened = false;
 
-                    PartDocument pDoc = GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
+                    PartDocument pDoc = CommonOperations.GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
                     if (pDoc == null)
                         throw new Exception("Не удалось получить PartDocument.");
 
@@ -206,7 +206,7 @@ namespace DxfExporter.Export_Dxf
                         if (fileStructure.IsModelStatePart)
                         {
                             ctx.InvApp.SilentOperation = true;
-                            pDoc = NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
+                            pDoc = CommonOperations.NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
                             foreach (var modelState in sheetMetalCompDef.ModelStates.Cast<ModelState>()
                                          .Where(modelState => modelState.Name == fileStructure.MemberName))
                             {
@@ -444,46 +444,7 @@ namespace DxfExporter.Export_Dxf
             return exportDir;
         }
 
-        /// <summary>
-        /// Возвращает PartDocument по полному пути: если открыт — берёт из Documents, иначе открывает.
-        /// </summary>
-        /// <param name="invApp">Экземпляр Inventor.Application.</param>
-        /// <param name="fullPath">Полный путь к файлу.</param>
-        /// <param name="wasOpened">True если документ был открыт этим методом.</param>
-        /// <returns>PartDocument или null.</returns>
-        private PartDocument GetOrOpenPartDocument(Inventor.Application invApp, string fullPath, out bool wasOpened)
-        {
-            // Изначально считаем что не открывали
-            wasOpened = false;
 
-            // 1) Пытаемся найти документ среди уже открытых по FullFileName
-            foreach (var doc in from Document doc in invApp.Documents
-                     where doc.DocumentType == DocumentTypeEnum.kPartDocumentObject 
-                     where !string.IsNullOrWhiteSpace(doc.FullFileName) 
-                     where string.Equals(doc.FullFileName, fullPath, StringComparison.OrdinalIgnoreCase) select doc)
-            {
-                return (PartDocument)doc;
-            }
-
-            // 2) Не нашли — открываем
-            return NeedOpenedFile(invApp, fullPath, out wasOpened);
-        }
-
-        /// <summary>
-        /// Функция для открытия файла
-        /// </summary>
-        /// <param name="invApp"></param>
-        /// <param name="fullPath"></param>
-        /// <param name="wasOpened"></param>
-        /// <returns></returns>
-        private PartDocument NeedOpenedFile(Inventor.Application invApp, string fullPath, out bool wasOpened)
-        {
-            PartDocument openedDoc = invApp.Documents.Open(fullPath, true) as PartDocument;
-            wasOpened = openedDoc != null;
-
-            return openedDoc;
-        }
-        
         /// <summary>
         /// Проверяет путь к файлу и создаёт нужную структуру папок для DXF в зависимости от наличия "_Модель" или "Модель" в пути.
         /// </summary>

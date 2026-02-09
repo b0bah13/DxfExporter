@@ -21,9 +21,11 @@ using DxfExporter.MaskProcess;
 using DxfExporter.Scanning;
 using DxfExporter.Versions;
 using Inventor;
+using Microsoft.VisualBasic;
 using Microsoft.Win32;
 using static System.Net.Mime.MediaTypeNames;
 using Environment = System.Environment;
+using Path = System.IO.Path;
 using Point = System.Windows.Point;
 using TextBox = System.Windows.Controls.TextBox;
 
@@ -56,7 +58,9 @@ namespace DxfExporter
         public enum CallSource
         {
             Scan,
-            Export
+            Export,
+            AddOpen,
+            ChoiceInFolder
         }
 
         public class ExportSettings
@@ -96,6 +100,8 @@ namespace DxfExporter
 
                 string txtInfo = lastVer.Description;
                 ShowNewVersion.ShowInfo(txtInfo);
+
+                StartTour();
             }
 
             Loaded += MainWindow_Loaded;
@@ -468,6 +474,39 @@ namespace DxfExporter
             if(string.IsNullOrEmpty(_exportDir)) return;
             if(!System.IO.Path.Exists(_exportDir))return;
             Process.Start("explorer.exe", $"\"{_exportDir}\"");
+        }
+
+        /// <summary>
+        /// Кнопка добавления открытых файлов
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void addOpenFilesButton_Click(object sender, RoutedEventArgs e)
+        {
+            StartAddFiles(CallSource.AddOpen);
+        }
+
+        /// <summary>
+        /// Кнопка добавления файлов из папки
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void choiceFilesButton_Click(object sender, RoutedEventArgs e)
+        {
+            StartAddFiles(CallSource.ChoiceInFolder);
+        }
+
+        /// <summary>
+        /// Очистка результатов сканирования
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void clearListButton_Click(object sender, RoutedEventArgs e)
+        {
+            LogTextBox.Clear();
+            scanData.ItemsSource = null;
+            CheckExit.ClearData();
+            txtStatus.Text = "Готов к сканированию";
         }
 
         #region Обработка выборка маски выгрузки
@@ -876,6 +915,37 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Инвертирует отметки выгрузки
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MenuItem_InvertCheck_Click(object sender, RoutedEventArgs e)
+        {
+            var selected = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            if (selected.Count == 0) return;
+
+            var all = scanData.Items.OfType<StructureClass>().ToList();
+
+            // Сбрасываем у всех
+            foreach (var row in all)
+            {
+                row.NeedUnload = false;
+            }
+
+            // Включаем только у выделенных
+            foreach (var row in selected)
+            {
+                row.NeedUnload = true;
+            }
+
+            // Один проход по всем строкам для обновления
+            foreach (var row in all)
+            {
+                row.UpdateUnloadProp();
+            }
+        }
+
         #endregion
 
         #region Ознакомительный режим
@@ -928,6 +998,27 @@ namespace DxfExporter
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
+                Target = addOpenFilesButton,
+                Title = "Добавление файлов",
+                Description = "Добавляет в таблицу открытые листовые детали."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = choiceFilesButton,
+                Title = "Добавление файлов",
+                Description = "Добавляет в таблицу листовые детали выбранные пользователем из папки."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
+                Target = clearListButton,
+                Title = "Очистка",
+                Description = "Очищает таблицу."
+            });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = HomeTab,
                 Target = startButton,
                 Title = "Создание DXF",
                 Description = "Создаёт DXF для выбранных позиций в таблице."
@@ -973,7 +1064,8 @@ namespace DxfExporter
                               "Описание значений в столбце \"Свойства выгрузки\":\n" +
                               "Грав. - выгружается гравировка\n" +
                               "Гиб - выгружаются линии гиба\n" +
-                              "Шаблон - DXF файлы будут выгружены в папку \"Шаблон\""
+                              "Шаблон - DXF файлы будут выгружены в папку \"Шаблоны\"\n" +
+                              "\nОпция выбора 'Оставить выбранные' оставляет свойство 'Выгрузить' только на выбранных строках."
             });
             _tourSteps.Add(new TourStep
             {
@@ -1228,7 +1320,7 @@ namespace DxfExporter
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
                 ScanningProcess _processor = new ScanningProcess(this);
-                _scanResult = await _processor.StartProcessingAsync(_cts.Token); // Передаем токен отмены
+                _scanResult = await _processor.StartProcessingAsync(_cts.Token, CallSource.Scan); // Передаем токен отмены
 
                 if (CheckExit.NeedExit)
                 {
@@ -1605,6 +1697,108 @@ namespace DxfExporter
                 : originalText;
 
             return filePath;
+        }
+
+        /// <summary>
+        /// Процесс для добавления открытых файлов.
+        /// </summary>
+        private async void StartAddFiles(CallSource callSource)
+        {
+            string errText = "Ошибка при добавлении файлов";
+            try
+            {
+                // Дать UI возможность обновить интерфейс
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
+
+                List<string> choiceFiles = null;
+                //если добавляем из папки
+                if (callSource == CallSource.ChoiceInFolder)
+                {
+                    errText = "Ошибка при выборе файлов";
+
+                    // Получаем путь родительской папки того файла который сканируем
+                    string parentDirectory = string.IsNullOrWhiteSpace(_scanFilePath)
+                        ? string.Empty
+                        : Path.GetDirectoryName(_scanFilePath) ?? string.Empty;
+
+                    // Выбираем детали inventor
+                    choiceFiles = SelectedFiles(parentDirectory);
+
+                    if (choiceFiles?.Count == 0) return;
+                }
+
+                ScanningProcess _processor = new ScanningProcess(this);
+                ScanResult addResult = await _processor.StartProcessingAsync(_cts.Token, 
+                    callSource, choiceFiles); 
+
+                if (CheckExit.NeedExit)
+                {
+                    txtStatus.Text = CheckExit.Message;
+                    return;
+                }
+
+                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>
+                               ?? new ObservableCollection<StructureClass>();
+
+                //не добавляет уже существующие в таблице детали
+                foreach (var result in addResult.ScannedData)
+                {
+                    if (!procData.Any(x => x.Path == result.Path))
+                    {
+                        procData.Add(result);
+                    }
+                }
+
+                scanData.ItemsSource ??= procData;
+
+                foreach (StructureClass structureClass in scanData.ItemsSource)
+                {
+                    structureClass.UpdateUnloadProp();
+                }
+
+                // подсветить детали с ошибками
+                SelectDetails(scanData.ItemsSource as ObservableCollection<StructureClass>);
+
+                txtStatus.Text = "Готов к выгрузке dxf";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.StackTrace);
+                txtStatus.Text = errText;
+            }
+            finally
+            {
+                
+            }
+        }
+        
+        /// <summary>
+        /// Выбор файлов ipt
+        /// </summary>
+        /// <param name="initialDirectory">Папка открываемая по умолчанию</param>
+        /// <returns>Пути до выбранных ipt файлов</returns>
+        private List<string> SelectedFiles(string initialDirectory)
+        {
+            // Создаем экземпляр OpenFileDialog
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            
+            // Устанавливаем начальный каталог
+            openFileDialog.InitialDirectory = initialDirectory;
+
+            // Устанавливаем фильтр для отображения только ipt-файлов
+            openFileDialog.Filter = "Детали Inventor (*.ipt;)|*.ipt";
+
+            openFileDialog.Multiselect = true;
+
+            // Устанавливаем заголовок окна
+            openFileDialog.Title = "Выберите детали Inventor";
+
+            // Показываем диалоговое окно и проверяем результат
+            List<string> filesPath = openFileDialog.ShowDialog() == true
+                ? openFileDialog.FileNames.ToList()
+                : null;
+
+            return filesPath;
         }
 
 
