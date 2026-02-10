@@ -752,11 +752,15 @@
             <Grid x:Name="OverlayGrid" Background="#80000000" Grid.RowSpan="2" Grid.Row="1" Visibility="Collapsed">
                 <Border Background="#FFFFFF" CornerRadius="10" Padding="20" 
                         HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Grid Width="305" >
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
                         <!-- Контейнер для логотипа + круглой маски -->
-                        <Grid Width="100" Height="100">
-
+                        <Grid Width="100" Height="100" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
                             <!-- Круглый маскирующий оверлей (тёмно-серый) -->
                             <!-- При 0% высота = 100 → полностью закрывает, при 100% = 0 → ничего не закрывает -->
                             <!-- Цветная картинка, которая вращается -->
@@ -807,6 +811,12 @@
                                 FontStyle="Italic" Margin="10,0,5,0" TextWrapping="Wrap" Visibility="Collapsed" ><Run Text="деталь..."/></TextBlock>
                         </StackPanel>
                     </StackPanel>
+                        
+                        <TextBlock x:Name="tb_quote" Grid.Row="1" 
+                                   TextWrapping ="Wrap"
+                                   Text="Это вам не это " 
+                                   FontSize="16" Visibility="Collapsed" FontStyle="Italic" />
+                    </Grid>
                 </Border>
             </Grid>
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -8,6 +9,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.JavaScript;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -25,9 +27,14 @@ using Microsoft.VisualBasic;
 using Microsoft.Win32;
 using static System.Net.Mime.MediaTypeNames;
 using Environment = System.Environment;
+using File = System.IO.File;
 using Path = System.IO.Path;
 using Point = System.Windows.Point;
 using TextBox = System.Windows.Controls.TextBox;
+using System.Text.Json.Serialization;
+using System.Reflection.Metadata;
+using Document = Inventor.Document;
+
 
 namespace DxfExporter
 {
@@ -75,6 +82,45 @@ namespace DxfExporter
             public bool CheckGab { get; set; } = true;
             public string PathTable { get; set; } = String.Empty;
         }
+        
+        #endregion
+
+        #region Данные для фраз
+
+        /// <summary>
+        /// Все загруженные цитаты
+        /// </summary>
+        private List<Quote> _quotes = new List<Quote>();
+
+        /// <summary>
+        /// Перемешанный список индексов
+        /// </summary>
+        private List<int> _shuffledIndexes = new List<int>();
+
+        /// <summary>
+        /// Текущая позиция в списке
+        /// </summary>
+        private int _currentIndex = 0;
+
+        /// <summary>
+        /// Таймер смены цитат
+        /// </summary>
+        private DispatcherTimer _quoteTimer;
+
+        /// <summary>
+        /// Генератор случайных чисел
+        /// </summary>
+        private readonly Random _random = new Random();
+
+        const string quoteFile = @"K:\Автоматизация процессов\Report\Фразы.json";
+
+        /// <summary>
+        /// Простая модель цитаты: только текст
+        /// </summary>
+        public class Quote
+        {
+            [JsonPropertyName("text")] public string Text { get; set; } = string.Empty;
+        }
 
         #endregion
 
@@ -103,7 +149,7 @@ namespace DxfExporter
 
                 StartTour();
             }
-
+            
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
             SourceInitialized += MainWindow_SourceInitialized;
@@ -510,6 +556,49 @@ namespace DxfExporter
             scanData.ItemsSource = null;
             CheckExit.ClearData();
             txtStatus.Text = "Готов к сканированию";
+        }
+
+        /// <summary>
+        /// Нажатие на значок загрузки
+        /// </summary>
+        private void Grid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Загружаем цитаты только один раз
+            if (_quotes.Count == 0)
+            {
+                _quotes = LoadQuotes(quoteFile);
+                if (_quotes.Count == 0)
+                    return;
+
+                ShuffleQuotes();
+            }
+
+            // Показать / скрыть блок
+            tb_quote.Visibility = tb_quote.Visibility switch
+            {
+                Visibility.Collapsed => Visibility.Visible,
+                Visibility.Visible => Visibility.Collapsed,
+                _ => tb_quote.Visibility
+            };
+
+            // Инициализируем таймер только при первом показе
+            if (tb_quote.Visibility == Visibility.Visible)
+            {
+                ShowNextQuote();
+
+                if (_quoteTimer == null)
+                {
+                    _quoteTimer = new DispatcherTimer();
+                    _quoteTimer.Interval = TimeSpan.FromSeconds(5);
+                    _quoteTimer.Tick += QuoteTimer_Tick;
+                }
+
+                _quoteTimer.Start();
+            }
+            else
+            {
+                _quoteTimer?.Stop();
+            }
         }
 
         #region Обработка выборка маски выгрузки
@@ -1463,7 +1552,8 @@ namespace DxfExporter
             
             CheckExit.ClearData();
             OverlayGrid.Visibility = Visibility.Visible;
-            
+            tb_quote.Visibility = Visibility.Collapsed;
+
             DesaturateOverlay.Height = 100;
         }
 
@@ -1476,7 +1566,8 @@ namespace DxfExporter
             OverlayText.Text = CommonConstants.OverlayScan;
 
             OverlayProcessText.Visibility = Visibility.Collapsed;
-            
+            tb_quote.Visibility = Visibility.Collapsed;
+
             if (String.IsNullOrEmpty(CheckExit.SystemMessage))
             {
                 txtStatus.Text = source switch
@@ -1864,6 +1955,70 @@ namespace DxfExporter
             });
         }
 
+        /// <summary>
+        /// Загрузка цитат из файла
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static List<Quote> LoadQuotes(string filePath)
+        {
+            if (!File.Exists(filePath)) return new List<Quote>();
+
+            try
+            {
+                string json = File.ReadAllText(filePath);
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                return JsonSerializer.Deserialize<List<Quote>>(json, options)
+                       ?? new List<Quote>();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка чтения файла: {ex.Message}");
+                return new List<Quote>();
+            }
+        }
+
+        /// <summary>
+        /// Смена цитаты по таймеру
+        /// </summary>
+        private void QuoteTimer_Tick(object sender, EventArgs e)
+        {
+            ShowNextQuote();
+        }
+
+        /// <summary>
+        /// Перемешивает индексы цитат
+        /// </summary>
+        private void ShuffleQuotes()
+        {
+            _shuffledIndexes = Enumerable
+                .Range(0, _quotes.Count)
+                .OrderBy(x => _random.Next())
+                .ToList();
+
+            _currentIndex = 0;
+        }
+
+        /// <summary>
+        /// Отображает следующую цитату
+        /// </summary>
+        private void ShowNextQuote()
+        {
+            if (_quotes.Count == 0)
+                return;
+
+            // если дошли до конца — начинаем заново
+            if (_currentIndex >= _shuffledIndexes.Count)
+                ShuffleQuotes();
+
+            int quoteIndex = _shuffledIndexes[_currentIndex];
+            tb_quote.Text = _quotes[quoteIndex].Text;
+
+            _currentIndex++;
+        }
 
         #endregion
 
@@ -2137,6 +2292,7 @@ namespace DxfExporter
 
             return version?.ToString() ?? "?.?.?.?";
         }
+
 
         /// <summary>
         /// Обновляет тул тип в зависимости от выбранной позиции
