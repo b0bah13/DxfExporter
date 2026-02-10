@@ -8,7 +8,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using DxfExporter.Constants;
 using System.Windows.Controls;
+using DxfExporter.Export_Dxf;
 using static DxfExporter.MainWindow;
+using System.Windows.Media.Animation;
 
 namespace DxfExporter.Scanning
 {
@@ -21,6 +23,11 @@ namespace DxfExporter.Scanning
         //для ограничения отправки писем
         private static DateTime _lastErrorEmailSent = DateTime.MinValue;
         private static readonly TimeSpan _emailCooldown = TimeSpan.FromMinutes(5);
+        
+        /// <summary>
+        /// Настройки проверки габарита развёртки
+        /// </summary>
+        public CheckFileSettings CheckSettings { get; }
 
         //public StateWithMessage CheckExit = new StateWithMessage { };
 
@@ -29,9 +36,10 @@ namespace DxfExporter.Scanning
         /// </summary>
         //private ManualResetEvent _completionEvent = new ManualResetEvent(false);
 
-        public ScanningProcess(MainWindow mainWindow)
+        public ScanningProcess(MainWindow mainWindow, CheckFileSettings checkSettings)
         {
             _mainWindow = mainWindow;
+            CheckSettings = checkSettings;
         }
         
         /// <summary>
@@ -534,7 +542,17 @@ namespace DxfExporter.Scanning
                 "Description", "N/A");
             string material = sheetMetalCompDef.Material.Name;
             double thick = Math.Round((double)sheetMetalCompDef.Thickness.Value * 10, 2);
-            
+            double realThick = Math.Round(GetThickFromPart(sheetMetalCompDef) * 10, 2);
+
+            bool isBigFlat = false;
+            bool errorMatThick = false;
+            if (CheckSettings.CheckGab)
+            {
+                var check = CheckFlat(material, thick, sheetMetalCompDef);
+                isBigFlat = check.BigFlat;
+                errorMatThick = check.errMatThick;
+            }
+
             //Создание структуры
             StructureClass structure = new StructureClass
             {
@@ -556,7 +574,10 @@ namespace DxfExporter.Scanning
                 MemberName = modName,
                 //UnloadAllVers = false - по умолчанию
                 NoFlat = !sheetMetalCompDef.HasFlatPattern,
-                NullFlat = sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0
+                NullFlat = sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0,
+                BigFlat = isBigFlat,
+                ErrorMatThick = errorMatThick,
+                FakeThickness = realThick == 0 ? false : realThick != thick
             };
             
             _mainWindow.UpdateLog($"Записана в таблицу деталь: {partDoc.DisplayName}");
@@ -763,5 +784,52 @@ namespace DxfExporter.Scanning
             return result;
         }
 
+        /// <summary>
+        /// Проверяет, большая ли это развёртка для листа, Есть ли сочетание материал - толщина.
+        /// </summary>
+        /// <returns>BigFlat = true - большая, не поместится, false - обычная, поместится.
+        /// errMatThick = true - нет такого сочетания материала, толщины,
+        /// оба false, если ошибка</returns>
+        private (bool BigFlat, bool errMatThick) CheckFlat(string material,double thickness, SheetMetalComponentDefinition sheetMetalCompDef)
+        {
+            if (!sheetMetalCompDef.HasFlatPattern || sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0)
+            {
+                return (false,false);
+            }
+
+            double flatWidth = sheetMetalCompDef.FlatPattern.Width*10;
+            double flatLength = sheetMetalCompDef.FlatPattern.Length*10;
+
+            var dataTable = ExcelDataLoader.GetInstance(CheckSettings.PathTable)
+                .GetDataFromPathTable(material, thickness);
+
+            if (dataTable.ListLength == 0 || dataTable.ListWidth == 0) return (false,true);
+
+            bool fits =
+                !((flatLength <= dataTable.ListLength && flatWidth <= dataTable.ListWidth) ||
+                  (flatLength <= dataTable.ListWidth && flatWidth <= dataTable.ListLength));
+            
+            return (fits,false);
+        }
+
+        /// <summary>
+        /// Получение реальной толщины из детали
+        /// </summary>
+        /// <param name="sheetMetalCompDef"></param>
+        /// <returns>Толщина из детали</returns>
+        private double GetThickFromPart(SheetMetalComponentDefinition sheetMetalCompDef)
+        {
+            if (!sheetMetalCompDef.HasFlatPattern || sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0)
+            {
+                return 0;
+            }
+
+            double thick = Math.Min(sheetMetalCompDef.FlatPattern.OrientedMinimumRangeBox.DirectionOne.Length,
+                sheetMetalCompDef.FlatPattern.OrientedMinimumRangeBox.DirectionTwo.Length);
+
+            thick = Math.Min(thick, sheetMetalCompDef.FlatPattern.OrientedMinimumRangeBox.DirectionThree.Length);
+
+            return thick;
+        }
     }
 }

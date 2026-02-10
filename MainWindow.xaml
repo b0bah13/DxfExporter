@@ -506,6 +506,10 @@
                                               ToolTipService.InitialShowDelay="400"
                                               />
 
+                                    <MenuItem Header="Открыть деталь"
+                                              Click="MenuItem_OpenFile_Click"
+                                    />
+
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
 

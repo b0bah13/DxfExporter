@@ -114,6 +114,19 @@ public sealed class InventorHost : IDisposable
         return tcs.Task;
     }
 
+    /// <summary>
+    /// Выполняет действие в STA-потоке Inventor без ожидания результата
+    /// </summary>
+    public void Run(Action<Application> action)
+    {
+        _queue.Add(() =>
+        {
+            action(_invApp);
+            return Task.CompletedTask;
+        });
+    }
+
+
     private void Cleanup()
     {
         try

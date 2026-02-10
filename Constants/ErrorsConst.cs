@@ -8,7 +8,11 @@ namespace DxfExporter.Constants
 {
     class ErrorsConst
     {
-        public const string NoFlat = "Нет развёртки";
-        public const string NullFlat = "Пустая развёртка";
+        public const string NoFlat = "Нет развёртки!";
+        public const string NullFlat = "Пустая развёртка!";
+        public const string BigFlat = "Не влезет в лист!";
+        public const string FakeThickness = "Проверьте толщину!";
+        public const string ErrorMatThick = "Нет такого сочетания толщины и материала!";
     }
+
 }

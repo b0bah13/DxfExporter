@@ -110,6 +110,21 @@ namespace DxfExporter.Scanning
         public bool NullFlat { get; set; } = false;
 
         /// <summary>
+        /// Развёртка превышающая размер листа
+        /// </summary>
+        public bool BigFlat { get; set; } = false;
+
+        /// <summary>
+        /// Проверка реальная толщина у детали или нет
+        /// </summary>
+        public bool FakeThickness { get; set; } = false;
+
+        /// <summary>
+        /// Проверка сочетания толщины и материала
+        /// </summary>
+        public bool ErrorMatThick { get; set; } = false;
+        
+        /// <summary>
         /// Изменение строки статус
         /// </summary>
         public string Status

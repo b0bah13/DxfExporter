@@ -946,6 +946,21 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Открывает выбранные детали
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MenuItem_OpenFile_Click(object sender, RoutedEventArgs e)
+        {
+            var paths = scanData.SelectedItems.OfType<StructureClass>()
+                .Select(x => x.Path).ToList();
+
+            if (paths.Count == 0) return;
+
+            OpenDocumentsForUser(paths);
+        }
+
         #endregion
 
         #region Ознакомительный режим
@@ -1319,7 +1334,7 @@ namespace DxfExporter
                 // Дать UI возможность обновить интерфейс
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                ScanningProcess _processor = new ScanningProcess(this);
+                ScanningProcess _processor = new ScanningProcess(this, CheckSettings);
                 _scanResult = await _processor.StartProcessingAsync(_cts.Token, CallSource.Scan); // Передаем токен отмены
 
                 if (CheckExit.NeedExit)
@@ -1396,7 +1411,7 @@ namespace DxfExporter
 
                 ExportProcess _export = new ExportProcess(this);
                 _exportDir = await _export.StartProcessExport(_cts.Token, procData, maskData, modeName,
-                    _scanFilePath, FolderSettings, CheckSettings, unloadCount);
+                    _scanFilePath, FolderSettings, unloadCount);
 
                 if (CheckExit.NeedExit)
                 {
@@ -1638,8 +1653,7 @@ namespace DxfExporter
                 return new List<string>();
             }
         }
-
-
+        
         /// <summary>
         /// Обработка логики в текстовом поле
         /// </summary>
@@ -1651,14 +1665,16 @@ namespace DxfExporter
             if (string.IsNullOrEmpty(tBox.Text))
             {
                 tBox.Text = defpath;
+                CheckSettings.PathTable = defpath;
                 return;
             }
 
             if (!System.IO.File.Exists(tBox.Text))
             {
-                MessageBox.Show("Указанного файла не существует!\nБудет выбран файл по умолчанию.",
+                MessageBox.Show("Указанного файла не существует!\nБудет выбран стандартный файл таблицы соответствия.",
                     "Ошибка выбора файла", MessageBoxButton.OK, MessageBoxImage.Error);
                 tBox.Text = defpath;
+                CheckSettings.PathTable = defpath;
             }
             else
             {
@@ -1727,7 +1743,7 @@ namespace DxfExporter
                     if (choiceFiles?.Count == 0) return;
                 }
 
-                ScanningProcess _processor = new ScanningProcess(this);
+                ScanningProcess _processor = new ScanningProcess(this, CheckSettings);
                 ScanResult addResult = await _processor.StartProcessingAsync(_cts.Token, 
                     callSource, choiceFiles); 
 
@@ -1799,6 +1815,49 @@ namespace DxfExporter
                 : null;
 
             return filesPath;
+        }
+
+        /// <summary>
+        /// Открывает несколько документов Inventor для пользователя
+        /// </summary>
+        public void OpenDocumentsForUser(IEnumerable<string> paths)
+        {
+            if (paths == null) return;
+
+            // Убираем дубликаты и несуществующие файлы
+            var validPaths = paths
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(System.IO.File.Exists)
+                .ToList();
+
+            if (validPaths.Count == 0) return;
+
+            InventorHost.Instance.Value.Run(invApp =>
+            {
+                Document lastDoc = null;
+
+                foreach (string path in validPaths)
+                {
+                    try
+                    {
+                        // Если уже открыт — просто активируем
+                        Document opened = invApp.Documents.ItemByName[path];
+                        opened.Activate();
+                        lastDoc = opened;
+                    }
+                    catch
+                    {
+                        // Не открыт — открываем
+                        Document doc = invApp.Documents.Open(path, true);
+                        lastDoc = doc;
+                    }
+                }
+
+                // Активируем последний документ
+                lastDoc?.Activate();
+                invApp.Visible = true;
+            });
         }
 
 
@@ -1977,15 +2036,36 @@ namespace DxfExporter
         {
             foreach (StructureClass structureClass in scannedData)
             {
+                //если ячейка статус не пустая, то добавить перенос строки
+                if (!string.IsNullOrWhiteSpace(structureClass.Status))
+                {
+                    structureClass.Status += "\n";
+                }
+
                 if (structureClass.NoFlat)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray; // файл с проблемой
-                    structureClass.Status = ErrorsConst.NoFlat;
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.NoFlat;
                 }
                 else if (structureClass.NullFlat)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray; // файл с проблемой
-                    structureClass.Status = ErrorsConst.NullFlat;
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.NullFlat;
+                }
+                else if (structureClass.ErrorMatThick)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.ErrorMatThick;
+                }
+                else if (structureClass.BigFlat)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.BigFlat;
+                }
+                else if (structureClass.FakeThickness)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.FakeThickness;
                 }
             }
         }
