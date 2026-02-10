@@ -407,8 +407,11 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void VersInfoClick(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show(Versions.VersionHistory.GetFullHistory(),
-                "Информация об обновлениях", MessageBoxButton.OK, MessageBoxImage.Information);
+            var wpfWin = new InfoWindow("Информация об обновлениях", Versions.VersionHistory.GetFullHistory());
+            wpfWin.ShowDialog();
+            
+            //MessageBox.Show(Versions.VersionHistory.GetFullHistory(),
+            //    "Информация об обновлениях", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         /// <summary>
@@ -1080,7 +1083,8 @@ namespace DxfExporter
                               "Грав. - выгружается гравировка\n" +
                               "Гиб - выгружаются линии гиба\n" +
                               "Шаблон - DXF файлы будут выгружены в папку \"Шаблоны\"\n" +
-                              "\nОпция выбора 'Оставить выбранные' оставляет свойство 'Выгрузить' только на выбранных строках."
+                              "\nОпция выбора 'Оставить выбранные' оставляет свойство 'Выгрузить' только на выбранных строках.\n" +
+                              "'Открыть деталь' - открывает все выбранные детали, если они не открыты."
             });
             _tourSteps.Add(new TourStep
             {
@@ -2057,15 +2061,15 @@ namespace DxfExporter
                     structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
                     structureClass.Status += ErrorsConst.ErrorMatThick;
                 }
-                else if (structureClass.BigFlat)
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.BigFlat;
-                }
                 else if (structureClass.FakeThickness)
                 {
                     structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
                     structureClass.Status += ErrorsConst.FakeThickness;
+                }
+                else if (structureClass.BigFlat)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.BigFlat;
                 }
             }
         }

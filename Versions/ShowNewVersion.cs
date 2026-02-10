@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.DirectoryServices.AccountManagement;
+using System.Windows.Controls;
 
 namespace DxfExporter.Versions
 {
@@ -87,8 +88,8 @@ namespace DxfExporter.Versions
         {
             var progVer = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
 
-            MessageBox.Show($"Что нового:\n{textInfo}", $"Программа обновлена до версии: {progVer}",
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            var wpfWin = new InfoWindow($"Программа обновлена до версии: {progVer}", textInfo);
+            wpfWin.ShowDialog();
         }
 
     }
