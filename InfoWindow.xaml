@@ -239,10 +239,10 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock x:Name="infoHeadText" TextWrapping="Wrap" Text="Что нового:" 
-                           Margin="5,5,5,0" HorizontalAlignment="Left" 
+                           Margin="10,5,5,0" HorizontalAlignment="Left" 
                            />
 
-                <TextBox x:Name="infoText" Margin="5,5,5,5" 
+                <TextBox x:Name="infoText" Margin="10,5,10,5" 
                            TextWrapping="Wrap" Text="Информация" 
                            Grid.Row="1" ScrollViewer.VerticalScrollBarVisibility="Auto" 
                            />

@@ -233,15 +233,10 @@ namespace DxfExporter.Export_Dxf
 
                         //Получение имени файла из выбранной маски выгрузки
                         string fileName = ApplyMask(ctx.MaskData, fileStructure) + ".dxf";
-
-                        //учесть настройки выгрузки - без гравировки, с линиями гиба, все исполнения (пока не трогать)
+                        
                         //Выгрузить dxf
                         ExportDxf();
                         
-                        //TODO:внедрить проверку габарита развёртки, важно! после CheckAisiThick
-                        //Проверка габарита развёртки
-                        //_mainWindow.UpdateLog(ctx.CheckSettings.PathTable, false);
-
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
                         _mainWindow.MinusProgress(_percent);
