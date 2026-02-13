@@ -46,7 +46,6 @@ namespace DxfExporter
         
         private CancellationTokenSource _cts;
         private ScanResult _scanResult;
-        private readonly InventorHost _host = InventorHost.Instance.Value;
         private readonly List<TourStep> _tourSteps = new();
         private int _tourIndex;
         private bool _isTourActive;
@@ -1414,6 +1413,12 @@ namespace DxfExporter
 
         #region Обработка внутренней логики
 
+        private static bool IsInventorConnectionError(Exception ex)
+        {
+            return ex is InvalidOperationException &&
+                   ex.Message.Contains("Не удалось подключиться к Inventor", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>
         /// Начало сканирования.
         /// </summary>
@@ -1454,7 +1459,14 @@ namespace DxfExporter
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.StackTrace);
-                txtStatus.Text = $"Ошибка при сканировании";
+                txtStatus.Text = IsInventorConnectionError(ex)
+                    ? "Не удалось подключиться к Inventor"
+                    : "Ошибка при сканировании";
+
+                if (IsInventorConnectionError(ex))
+                {
+                    MessageBox.Show(ex.Message, "Inventor", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             finally
             {
@@ -1517,7 +1529,14 @@ namespace DxfExporter
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.StackTrace);
-                txtStatus.Text = $"Ошибка при выгрузке dxf";
+                txtStatus.Text = IsInventorConnectionError(ex)
+                    ? "Не удалось подключиться к Inventor"
+                    : "Ошибка при выгрузке dxf";
+
+                if (IsInventorConnectionError(ex))
+                {
+                    MessageBox.Show(ex.Message, "Inventor", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             finally
             {
@@ -1717,14 +1736,9 @@ namespace DxfExporter
         /// <returns>Список материалов</returns>
         private async Task<List<string>> GetMaterialNamesAsync()
         {
-            if (!_host.IsInitialized)
-            {
-                return new List<string>();
-            }
-
             try
             {
-                return await _host.RunAsync(app =>
+                return await InventorHost.Instance.Value.RunAsync(app =>
                 {
                     var lib = app.ActiveMaterialLibrary;
                     if (lib == null)
@@ -1875,7 +1889,14 @@ namespace DxfExporter
             catch (Exception ex)
             {
                 Debug.WriteLine(ex.StackTrace);
-                txtStatus.Text = errText;
+                txtStatus.Text = IsInventorConnectionError(ex)
+                    ? "Не удалось подключиться к Inventor"
+                    : errText;
+
+                if (IsInventorConnectionError(ex))
+                {
+                    MessageBox.Show(ex.Message, "Inventor", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
             finally
             {
@@ -1928,31 +1949,38 @@ namespace DxfExporter
 
             if (validPaths.Count == 0) return;
 
-            InventorHost.Instance.Value.Run(invApp =>
+            try
             {
-                Document lastDoc = null;
-
-                foreach (string path in validPaths)
+                InventorHost.Instance.Value.Run(invApp =>
                 {
-                    try
-                    {
-                        // Если уже открыт — просто активируем
-                        Document opened = invApp.Documents.ItemByName[path];
-                        opened.Activate();
-                        lastDoc = opened;
-                    }
-                    catch
-                    {
-                        // Не открыт — открываем
-                        Document doc = invApp.Documents.Open(path, true);
-                        lastDoc = doc;
-                    }
-                }
+                    Document lastDoc = null;
 
-                // Активируем последний документ
-                lastDoc?.Activate();
-                invApp.Visible = true;
-            });
+                    foreach (string path in validPaths)
+                    {
+                        try
+                        {
+                            // Если уже открыт — просто активируем
+                            Document opened = invApp.Documents.ItemByName[path];
+                            opened.Activate();
+                            lastDoc = opened;
+                        }
+                        catch
+                        {
+                            // Не открыт — открываем
+                            Document doc = invApp.Documents.Open(path, true);
+                            lastDoc = doc;
+                        }
+                    }
+
+                    // Активируем последний документ
+                    lastDoc?.Activate();
+                    invApp.Visible = true;
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Inventor", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         /// <summary>
