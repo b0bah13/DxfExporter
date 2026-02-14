@@ -34,6 +34,7 @@ using TextBox = System.Windows.Controls.TextBox;
 using System.Text.Json.Serialization;
 using System.Reflection.Metadata;
 using Document = Inventor.Document;
+using System.Collections.Specialized;
 
 
 namespace DxfExporter
@@ -49,6 +50,17 @@ namespace DxfExporter
         private readonly List<TourStep> _tourSteps = new();
         private int _tourIndex;
         private bool _isTourActive;
+        private bool _isApplyingSettings;
+
+        private static readonly JsonSerializerOptions SettingsJsonOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true
+        };
+
+        private static readonly string SettingsFilePath = Path.Combine(
+            Path.GetTempPath(),
+            "DxfExporter",
+            "settings-tab-state.json");
 
         public string AppVersion { get; private set; }
         public string _scanFilePath,_exportDir;
@@ -80,6 +92,18 @@ namespace DxfExporter
         { 
             public bool CheckGab { get; set; } = true;
             public string PathTable { get; set; } = String.Empty;
+        }
+
+        private sealed class SettingsTabState
+        {
+            public bool UserDxfDir { get; set; }
+            public bool CategorizeMaterial { get; set; } = true;
+            public bool CategorizeThickness { get; set; } = true;
+            public bool CheckGab { get; set; } = true;
+            public string? TablePath { get; set; }
+            public string? TemplateMode { get; set; }
+            public string? CustomText { get; set; }
+            public List<string> MaskParts { get; set; } = new List<string>();
         }
         
         #endregion
@@ -137,6 +161,11 @@ namespace DxfExporter
 
             // для обработки закрытия формы в другом потоке
             _cts = new CancellationTokenSource();
+
+            MaskVm.MaskParts.CollectionChanged += MaskParts_CollectionChanged;
+            txtCustomText.TextChanged += TxtCustomText_TextChanged;
+
+            LoadSettingsTabState();
             
             // отображение окна с информацией об изменениях
             if (ShowNewVersion.CheckNeedShow())
@@ -152,6 +181,103 @@ namespace DxfExporter
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
             SourceInitialized += MainWindow_SourceInitialized;
+        }
+
+        private void MaskParts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            SaveSettingsTabState();
+        }
+
+        private void TxtCustomText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            SaveSettingsTabState();
+        }
+
+        private void LoadSettingsTabState()
+        {
+            if (!File.Exists(SettingsFilePath))
+                return;
+
+            try
+            {
+                var json = File.ReadAllText(SettingsFilePath);
+                var state = JsonSerializer.Deserialize<SettingsTabState>(json);
+                if (state == null)
+                    return;
+
+                _isApplyingSettings = true;
+
+                userDirect.IsChecked = state.UserDxfDir;
+                categorizeMaterial.IsChecked = state.CategorizeMaterial;
+                categorizeThickness.IsChecked = state.CategorizeThickness;
+                checkGab.IsChecked = state.CheckGab;
+
+                string tablePath = string.IsNullOrWhiteSpace(state.TablePath) ? defaultPathTable : state.TablePath;
+                TablePath.Text = File.Exists(tablePath) ? tablePath : defaultPathTable;
+                CheckSettings.PathTable = TablePath.Text;
+
+                if (!string.IsNullOrWhiteSpace(state.TemplateMode))
+                {
+                    templateComboBox.SelectedItem = state.TemplateMode;
+                    if (templateComboBox.SelectedItem == null)
+                        templateComboBox.SelectedIndex = 0;
+                }
+
+                if (templateComboBox.SelectedItem is string template)
+                    MaskVm.ApplyTemplate(template);
+
+                if (state.MaskParts.Count > 0)
+                {
+                    MaskVm.ClearMaskParts();
+                    foreach (var part in state.MaskParts)
+                    {
+                        if (!string.IsNullOrWhiteSpace(part))
+                            MaskVm.MaskParts.Add(new MaskPart(part));
+                    }
+                }
+
+                MaskVm.CustomText = state.CustomText ?? string.Empty;
+                gridSettings.IsEnabled = MaskVm.IsMaskSettingsEnabled;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка загрузки настроек вкладки: {ex.Message}");
+            }
+            finally
+            {
+                _isApplyingSettings = false;
+            }
+        }
+
+        private void SaveSettingsTabState()
+        {
+            if (_isApplyingSettings)
+                return;
+
+            try
+            {
+                var state = new SettingsTabState
+                {
+                    UserDxfDir = userDirect.IsChecked == true,
+                    CategorizeMaterial = categorizeMaterial.IsChecked == true,
+                    CategorizeThickness = categorizeThickness.IsChecked == true,
+                    CheckGab = checkGab.IsChecked == true,
+                    TablePath = TablePath.Text,
+                    TemplateMode = templateComboBox.SelectedItem?.ToString(),
+                    CustomText = txtCustomText.Text,
+                    MaskParts = MaskVm.MaskParts.Select(x => x.Text).ToList()
+                };
+
+                var settingsDir = Path.GetDirectoryName(SettingsFilePath);
+                if (!string.IsNullOrWhiteSpace(settingsDir) && !Directory.Exists(settingsDir))
+                    Directory.CreateDirectory(settingsDir);
+
+                File.WriteAllText(SettingsFilePath, JsonSerializer.Serialize(state, SettingsJsonOptions));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка сохранения настроек вкладки: {ex.Message}");
+            }
         }
         
         #region Обработка кастомного заголовка
@@ -443,6 +569,7 @@ namespace DxfExporter
             }
 
             UpdateTooltip();
+            SaveSettingsTabState();
         }
         
         /// <summary>
@@ -466,12 +593,16 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void TablePath_TextChanged(object sender, TextChangedEventArgs e)
         {
+            if (_isApplyingSettings)
+                return;
+
             TextBox? tBox = sender as TextBox;
 
             switch (tBox?.Name)
             {
                 case "TablePath":
                     TextBoxProc(tBox, defaultPathTable);
+                    SaveSettingsTabState();
                     break;
             }
         }
@@ -510,6 +641,7 @@ namespace DxfExporter
             }
 
             UpdateTooltip();
+            SaveSettingsTabState();
         }
 
         /// <summary>
@@ -616,6 +748,7 @@ namespace DxfExporter
 
             //if (gbMaskSettings != null) gbMaskSettings.IsEnabled = MaskVm.IsMaskSettingsEnabled;
             if (gridSettings != null) gridSettings.IsEnabled = MaskVm.IsMaskSettingsEnabled;
+            SaveSettingsTabState();
 
         }
 
@@ -630,6 +763,8 @@ namespace DxfExporter
             {
                 MaskVm.AddHeaderToMask(item);
             }
+
+            SaveSettingsTabState();
         }
 
         private void AvailableList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -638,6 +773,8 @@ namespace DxfExporter
             {
                 MaskVm.AddHeaderToMask(item);
             }
+
+            SaveSettingsTabState();
         }
         
         /// <summary>
@@ -650,6 +787,7 @@ namespace DxfExporter
             
             MaskVm.AddCustomTextToMask();
             txtCustomText.Text = string.Empty;
+            SaveSettingsTabState();
         }
 
         /// <summary>
@@ -661,6 +799,8 @@ namespace DxfExporter
         {
             if (SelectedList.SelectedItem is MaskPart part)
                 MaskVm.RemovePart(part);
+
+            SaveSettingsTabState();
         }
 
         /// <summary>
@@ -673,6 +813,7 @@ namespace DxfExporter
             int idx = SelectedList.SelectedIndex;
             MaskVm.MoveUp(idx);
             SelectedList.SelectedIndex = Math.Max(0, idx - 1);
+            SaveSettingsTabState();
         }
 
         /// <summary>
@@ -685,6 +826,7 @@ namespace DxfExporter
             int idx = SelectedList.SelectedIndex;
             MaskVm.MoveDown(idx);
             SelectedList.SelectedIndex = Math.Min(MaskVm.MaskParts.Count - 1, idx + 1);
+            SaveSettingsTabState();
         }
 
         /// <summary>
@@ -694,6 +836,8 @@ namespace DxfExporter
         {
             if (SelectedList.SelectedItem is MaskPart part)
                 MaskVm.RemovePart(part);
+
+            SaveSettingsTabState();
         }
         
         /// <summary>
@@ -702,6 +846,7 @@ namespace DxfExporter
         private void ClearMaskParts_Click(object sender, RoutedEventArgs e)
         {
             MaskVm.ClearMaskParts();
+            SaveSettingsTabState();
         }
 
         #region Drag & Drop — левый список (добавление в маску)
@@ -740,6 +885,8 @@ namespace DxfExporter
             {
                 if (e.Data.GetData(typeof(MaskPart)) is MaskPart droppedPart)
                     MaskVm.DropToAvailableList(droppedPart);
+
+                SaveSettingsTabState();
             }
         }
 
@@ -805,6 +952,7 @@ namespace DxfExporter
             }
 
             MaskVm.DropToSelectedList(dropped, sourceHeader, insertIndex, moveInside);
+            SaveSettingsTabState();
         }
 
         #endregion
