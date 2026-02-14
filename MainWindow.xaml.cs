@@ -51,6 +51,7 @@ namespace DxfExporter
         private int _tourIndex;
         private bool _isTourActive;
         private bool _isApplyingSettings;
+        private bool _isSettingsInitialized;
 
         private static readonly JsonSerializerOptions SettingsJsonOptions = new JsonSerializerOptions
         {
@@ -165,6 +166,9 @@ namespace DxfExporter
             MaskVm.MaskParts.CollectionChanged += MaskParts_CollectionChanged;
 
             LoadSettingsTabState();
+
+            // Разрешаем сохранение только после завершения первичной инициализации окна.
+            _isSettingsInitialized = true;
             
             // отображение окна с информацией об изменениях
             if (ShowNewVersion.CheckNeedShow())
@@ -262,7 +266,9 @@ namespace DxfExporter
         /// </summary>
         private void SaveSettingsTabState()
         {
-            if (_isApplyingSettings)
+            // На старте элементы могут вызывать события до полной инициализации окна.
+            // В этот момент сохранять нельзя, чтобы не перезаписать файл дефолтными значениями.
+            if (_isApplyingSettings || !_isSettingsInitialized)
                 return;
 
             try
@@ -607,7 +613,9 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void TablePath_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (_isApplyingSettings)
+            // На старте элементы могут вызывать события до полной инициализации окна.
+            // В этот момент сохранять нельзя, чтобы не перезаписать файл дефолтными значениями.
+            if (_isApplyingSettings || !_isSettingsInitialized)
                 return;
 
             TextBox? tBox = sender as TextBox;
