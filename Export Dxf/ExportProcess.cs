@@ -527,14 +527,15 @@ namespace DxfExporter.Export_Dxf
             }
 
             // Путь к подпапке DXF
-            string dxfDir = Path.Combine(drawingsDir, "DXF");
+            //для пользовательского выбора не создаём подпапку DXF
+            //string dxfDir = Path.Combine(drawingsDir, "DXF");
             // Создаём DXF, если нет
-            if (!Directory.Exists(dxfDir))
+            if (!Directory.Exists(drawingsDir))
             {
-                Directory.CreateDirectory(dxfDir);
+                Directory.CreateDirectory(drawingsDir);
             }
 
-            return dxfDir;
+            return drawingsDir;
         }
 
         /// <summary>

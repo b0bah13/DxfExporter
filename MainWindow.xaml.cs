@@ -1412,13 +1412,7 @@ namespace DxfExporter
         #endregion
 
         #region Обработка внутренней логики
-
-        private static bool IsInventorConnectionError(Exception ex)
-        {
-            return ex is InvalidOperationException &&
-                   ex.Message.Contains("Не удалось подключиться к Inventor", StringComparison.OrdinalIgnoreCase);
-        }
-
+        
         /// <summary>
         /// Начало сканирования.
         /// </summary>
@@ -1981,6 +1975,17 @@ namespace DxfExporter
             {
                 MessageBox.Show(ex.Message, "Inventor", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+        }
+
+        /// <summary>
+        /// Проверяет удалось ли подключиться к Inventor.
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        private static bool IsInventorConnectionError(Exception ex)
+        {
+            return ex is InvalidOperationException &&
+                   ex.Message.Contains("Не удалось подключиться к Inventor", StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
