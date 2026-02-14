@@ -732,6 +732,19 @@
                             </StackPanel>
 
                         </GroupBox>
+                        <Button x:Name="clearSettingsButton" Width="80" Height="80" 
+                            Style="{StaticResource SmallButtonStyle}"
+                            ToolTip="Восстановить базовые настройки"
+                            ToolTipService.InitialShowDelay="400"
+                            HorizontalAlignment="Right" VerticalAlignment="Center" 
+                            Click="clearSettingsButton_Click">
+                            <StackPanel Height="75" Width="75">
+                                <Image Source="/refresh settings.png" Height="40" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,5,0,0"/>
+                                <TextBlock TextWrapping="Wrap" Text="Сбросить" TextAlignment="Center" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,5,0,0"/>
+
+                            </StackPanel>
+
+                        </Button>
                     </Grid>
 
                 </TabItem>
@@ -760,59 +773,59 @@
                         </Grid.RowDefinitions>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
 
-                        <!-- Контейнер для логотипа + круглой маски -->
-                        <Grid Width="100" Height="100" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
-                            <!-- Круглый маскирующий оверлей (тёмно-серый) -->
-                            <!-- При 0% высота = 100 → полностью закрывает, при 100% = 0 → ничего не закрывает -->
-                            <!-- Цветная картинка, которая вращается -->
-                            <Image x:Name="Logo" 
+                            <!-- Контейнер для логотипа + круглой маски -->
+                            <Grid Width="100" Height="100" MouseLeftButtonDown="Grid_MouseLeftButtonDown">
+                                <!-- Круглый маскирующий оверлей (тёмно-серый) -->
+                                <!-- При 0% высота = 100 → полностью закрывает, при 100% = 0 → ничего не закрывает -->
+                                <!-- Цветная картинка, которая вращается -->
+                                <Image x:Name="Logo" 
                                    Height="100" Width="100"
                                    Stretch="Uniform"
                                    RenderTransformOrigin="0.5,0.5"
                                    Source="/logo_ZV1.png">
-                                <Image.RenderTransform>
-                                    <RotateTransform x:Name="rotation" Angle="0"/>
-                                </Image.RenderTransform>
-                                <Image.Triggers>
-                                    <EventTrigger RoutedEvent="FrameworkElement.Loaded">
-                                        <BeginStoryboard>
-                                            <Storyboard>
-                                                <DoubleAnimation
+                                    <Image.RenderTransform>
+                                        <RotateTransform x:Name="rotation" Angle="0"/>
+                                    </Image.RenderTransform>
+                                    <Image.Triggers>
+                                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation
                                                     Storyboard.TargetName="rotation"
                                                     Storyboard.TargetProperty="Angle"
                                                     From="0" To="360" Duration="0:0:2"
                                                     RepeatBehavior="Forever"/>
-                                            </Storyboard>
-                                        </BeginStoryboard>
-                                    </EventTrigger>
-                                </Image.Triggers>
-                            </Image>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Image.Triggers>
+                                </Image>
 
-                            <!-- подбери 0.6–0.9 под свою картинку -->
-                            <Ellipse x:Name="DesaturateOverlay"
+                                <!-- подбери 0.6–0.9 под свою картинку -->
+                                <Ellipse x:Name="DesaturateOverlay"
                                      Fill="#808080"          
                                      Opacity="0.9"
                                      VerticalAlignment="Top"
                                      Height="100"
                                      Width="100">
-                                <!-- Чтобы круг не обрезался по краям контейнера -->
-                                <Ellipse.Clip>
-                                    <EllipseGeometry Center="50,50" RadiusX="41" RadiusY="41"/>
-                                </Ellipse.Clip>
-                            </Ellipse>
-                        </Grid>
+                                    <!-- Чтобы круг не обрезался по краям контейнера -->
+                                    <Ellipse.Clip>
+                                        <EllipseGeometry Center="50,50" RadiusX="41" RadiusY="41"/>
+                                    </Ellipse.Clip>
+                                </Ellipse>
+                            </Grid>
 
-                        <StackPanel VerticalAlignment="Top" Width="205" Margin="0,20,0,0">
-                            <!-- Анимированное изображение -->
-                            <TextBlock x:Name="OverlayText" 
+                            <StackPanel VerticalAlignment="Top" Width="205" Margin="0,20,0,0">
+                                <!-- Анимированное изображение -->
+                                <TextBlock x:Name="OverlayText" 
                                 FontSize="16"
                                 Margin="10,0,5,0" FontStyle="Italic" VerticalAlignment="Top" ><Run Text="Пожалуйста, подождите"/><LineBreak /><Run Text="Сборка сканируется"/></TextBlock>
-                            <TextBlock x:Name="OverlayProcessText" 
+                                <TextBlock x:Name="OverlayProcessText" 
                                 FontSize="16"
                                 FontStyle="Italic" Margin="10,0,5,0" TextWrapping="Wrap" Visibility="Collapsed" ><Run Text="деталь..."/></TextBlock>
+                            </StackPanel>
                         </StackPanel>
-                    </StackPanel>
-                        
+
                         <TextBlock x:Name="tb_quote" Grid.Row="1" 
                                    TextWrapping ="Wrap"
                                    Text="Это вам не это " 

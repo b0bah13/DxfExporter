@@ -172,16 +172,13 @@ namespace DxfExporter
             LoadSettingsTabState();
             // Разрешаем сохранение только после завершения первичной инициализации окна.
             _isSettingsInitialized = true;
-            
+
             // отображение окна с информацией об изменениях
-            if (ShowNewVersion.CheckNeedShow())
+            var (needShow, unseenVersions) = ShowNewVersion.CheckNeedShow();
+
+            if (needShow)
             {
-                var lastVer = Versions.VersionHistory.GetLatest();
-
-                string txtInfo = lastVer.Description;
-                ShowNewVersion.ShowInfo(txtInfo);
-
-                StartTour();
+                ShowNewVers(unseenVersions);
             }
             
             Loaded += MainWindow_Loaded;
@@ -657,6 +654,21 @@ namespace DxfExporter
         private void TxtCustomText_TextChanged(object sender, TextChangedEventArgs e)
         {
             SaveSettingsTabState();
+        }
+
+        /// <summary>
+        /// Восстановление базовых настроек
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void clearSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            userDirect.IsChecked = false;
+            categorizeMaterial.IsChecked = true;
+            categorizeThickness.IsChecked = true;
+            checkGab.IsChecked = true;
+            TablePath.Text = defaultPathTable;
+            templateComboBox.SelectedIndex = 0;
         }
 
         #region Обработка выборка маски выгрузки
@@ -1297,7 +1309,15 @@ namespace DxfExporter
                 Title = "Состав шаблона",
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = clearSettingsButton,
+                Title = "Восстановление настроек",
+                Description = "Восстанавливает базовые настройки программы."
+            });
 
+            
             // _tourSteps.Add(new TourStep { Tab = HomeTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
             // _tourSteps.Add(new TourStep { Tab = SettingsTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
         }
@@ -1305,7 +1325,7 @@ namespace DxfExporter
         /// <summary>
         /// Запускает ознакомительный режим с первого шага.
         /// </summary>
-        private void StartTour()
+        private void StartTour(int tourStep = 0)
         {
             if (_tourSteps.Count == 0)
             {
@@ -1320,7 +1340,7 @@ namespace DxfExporter
             }
 
             // Сбрасываем индекс на первый шаг и включаем оверлей.
-            _tourIndex = 0;
+            _tourIndex = tourStep;
             _isTourActive = true;
             TourOverlay.Visibility = Visibility.Visible;
             // Отрисовываем первый шаг.
@@ -2536,6 +2556,38 @@ namespace DxfExporter
             catch (Exception ex)
             {
                 Debug.WriteLine($"Ошибка сохранения настроек вкладки: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Метод для обработки логики отображения окна с информацией о версии
+        /// </summary>
+        /// <param name="unseenVersions"></param>
+        private void ShowNewVers(List<string> unseenVersions)
+        {
+            foreach (string version in unseenVersions)
+            {
+                var lastVer = VersionHistory.GetByVersion(version);
+                string txtInfo = lastVer.Description;
+
+                ShowNewVersion.ShowInfo(version, txtInfo);
+            }
+
+            if (unseenVersions.Count > 1)
+            {
+                StartTour();
+            }
+            else
+            {
+                switch (unseenVersions[0])
+                {
+                    case "1.0.1.1":
+                        StartTour(1);
+                        break;
+                    case "1.0.1.2":
+                        StartTour(16);
+                        break;
+                }
             }
         }
 
