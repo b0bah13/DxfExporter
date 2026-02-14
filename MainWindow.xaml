@@ -676,6 +676,7 @@
 
                                             <TextBox x:Name="txtCustomText"
                                                  Text="{Binding CustomText}"
+                                                 TextChanged="TxtCustomText_TextChanged"
                                                  ToolTip="Ввод пользовательского текста"
                                                  ToolTipService.InitialShowDelay="400"
                                                  Margin="0,0,5,0"/>

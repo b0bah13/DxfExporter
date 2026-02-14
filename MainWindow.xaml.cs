@@ -163,7 +163,6 @@ namespace DxfExporter
             _cts = new CancellationTokenSource();
 
             MaskVm.MaskParts.CollectionChanged += MaskParts_CollectionChanged;
-            txtCustomText.TextChanged += TxtCustomText_TextChanged;
 
             LoadSettingsTabState();
             
@@ -183,16 +182,25 @@ namespace DxfExporter
             SourceInitialized += MainWindow_SourceInitialized;
         }
 
+        /// <summary>
+        /// Обрабатывает изменения коллекции частей маски и сохраняет состояние вкладки настроек.
+        /// </summary>
         private void MaskParts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
             SaveSettingsTabState();
         }
 
+        /// <summary>
+        /// Обрабатывает изменение пользовательского текста маски и сохраняет состояние вкладки настроек.
+        /// </summary>
         private void TxtCustomText_TextChanged(object sender, TextChangedEventArgs e)
         {
             SaveSettingsTabState();
         }
 
+        /// <summary>
+        /// Загружает состояние элементов вкладки настроек из внешнего JSON-файла, если он существует.
+        /// </summary>
         private void LoadSettingsTabState()
         {
             if (!File.Exists(SettingsFilePath))
@@ -249,6 +257,9 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Сохраняет текущее состояние элементов вкладки настроек в JSON-файл в temp-папке пользователя.
+        /// </summary>
         private void SaveSettingsTabState()
         {
             if (_isApplyingSettings)
@@ -258,14 +269,17 @@ namespace DxfExporter
             {
                 var state = new SettingsTabState
                 {
-                    UserDxfDir = userDirect.IsChecked == true,
-                    CategorizeMaterial = categorizeMaterial.IsChecked == true,
-                    CategorizeThickness = categorizeThickness.IsChecked == true,
-                    CheckGab = checkGab.IsChecked == true,
-                    TablePath = TablePath.Text,
-                    TemplateMode = templateComboBox.SelectedItem?.ToString(),
-                    CustomText = txtCustomText.Text,
-                    MaskParts = MaskVm.MaskParts.Select(x => x.Text).ToList()
+                    UserDxfDir = userDirect?.IsChecked == true,
+                    CategorizeMaterial = categorizeMaterial?.IsChecked == true,
+                    CategorizeThickness = categorizeThickness?.IsChecked == true,
+                    CheckGab = checkGab?.IsChecked == true,
+                    TablePath = TablePath?.Text ?? string.Empty,
+                    TemplateMode = templateComboBox?.SelectedItem?.ToString(),
+                    CustomText = txtCustomText?.Text ?? string.Empty,
+                    MaskParts = MaskVm.MaskParts
+                        .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Text))
+                        .Select(x => x.Text)
+                        .ToList()
                 };
 
                 var settingsDir = Path.GetDirectoryName(SettingsFilePath);
@@ -767,6 +781,9 @@ namespace DxfExporter
             SaveSettingsTabState();
         }
 
+        /// <summary>
+        /// Добавляет выбранный заголовок в маску по двойному клику в левом списке.
+        /// </summary>
         private void AvailableList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
             if (AvailableList.SelectedItem is HeaderItem item)
@@ -878,6 +895,9 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Обрабатывает drop в левый список: удаляет элемент из маски и сохраняет состояние.
+        /// </summary>
         private void AvailableList_Drop(object sender, DragEventArgs e)
         {
             // Перетаскивание обратно из правого → снимаем флаг IsUsed
