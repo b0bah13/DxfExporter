@@ -35,6 +35,7 @@ using System.Text.Json.Serialization;
 using System.Reflection.Metadata;
 using Document = Inventor.Document;
 using System.Collections.Specialized;
+using System.IO;
 
 
 namespace DxfExporter
@@ -44,7 +45,8 @@ namespace DxfExporter
         #region Объявление переменных
         
         const string defaultPathTable = @"K:\Документы\Инструкции\Автоматизация процессов\Таблица соответствия.xlsx";
-        
+        private static readonly string SettingsFilePath = Path.Combine(Path.GetTempPath(), "DxfExporter", "settings-tab-state.json");
+
         private CancellationTokenSource _cts;
         private ScanResult _scanResult;
         private readonly List<TourStep> _tourSteps = new();
@@ -57,11 +59,6 @@ namespace DxfExporter
         {
             WriteIndented = true
         };
-
-        private static readonly string SettingsFilePath = Path.Combine(
-            Path.GetTempPath(),
-            "DxfExporter",
-            "settings-tab-state.json");
 
         public string AppVersion { get; private set; }
         public string _scanFilePath,_exportDir;
@@ -82,6 +79,9 @@ namespace DxfExporter
             ChoiceInFolder
         }
 
+        /// <summary>
+        /// Класс для хранения данных о настройках структуры папок
+        /// </summary>
         public class ExportSettings
         {
             public bool SubFolderMaterials { get; set; } = true;
@@ -89,12 +89,18 @@ namespace DxfExporter
             public bool UserDxfDir { get; set; } = false;
         }
 
+        /// <summary>
+        /// Класс для хранения данных для проверки габарита
+        /// </summary>
         public class CheckFileSettings
         { 
             public bool CheckGab { get; set; } = true;
             public string PathTable { get; set; } = String.Empty;
         }
 
+        /// <summary>
+        /// Класс для хранения настроек
+        /// </summary>
         private sealed class SettingsTabState
         {
             public bool UserDxfDir { get; set; }
@@ -147,8 +153,7 @@ namespace DxfExporter
         }
 
         #endregion
-
-
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -164,9 +169,7 @@ namespace DxfExporter
             _cts = new CancellationTokenSource();
 
             MaskVm.MaskParts.CollectionChanged += MaskParts_CollectionChanged;
-
             LoadSettingsTabState();
-
             // Разрешаем сохранение только после завершения первичной инициализации окна.
             _isSettingsInitialized = true;
             
@@ -184,120 +187,6 @@ namespace DxfExporter
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
             SourceInitialized += MainWindow_SourceInitialized;
-        }
-
-        /// <summary>
-        /// Обрабатывает изменения коллекции частей маски и сохраняет состояние вкладки настроек.
-        /// </summary>
-        private void MaskParts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        {
-            SaveSettingsTabState();
-        }
-
-        /// <summary>
-        /// Обрабатывает изменение пользовательского текста маски и сохраняет состояние вкладки настроек.
-        /// </summary>
-        private void TxtCustomText_TextChanged(object sender, TextChangedEventArgs e)
-        {
-            SaveSettingsTabState();
-        }
-
-        /// <summary>
-        /// Загружает состояние элементов вкладки настроек из внешнего JSON-файла, если он существует.
-        /// </summary>
-        private void LoadSettingsTabState()
-        {
-            if (!File.Exists(SettingsFilePath))
-                return;
-
-            try
-            {
-                var json = File.ReadAllText(SettingsFilePath);
-                var state = JsonSerializer.Deserialize<SettingsTabState>(json);
-                if (state == null)
-                    return;
-
-                _isApplyingSettings = true;
-
-                userDirect.IsChecked = state.UserDxfDir;
-                categorizeMaterial.IsChecked = state.CategorizeMaterial;
-                categorizeThickness.IsChecked = state.CategorizeThickness;
-                checkGab.IsChecked = state.CheckGab;
-
-                string tablePath = string.IsNullOrWhiteSpace(state.TablePath) ? defaultPathTable : state.TablePath;
-                TablePath.Text = File.Exists(tablePath) ? tablePath : defaultPathTable;
-                CheckSettings.PathTable = TablePath.Text;
-
-                if (!string.IsNullOrWhiteSpace(state.TemplateMode))
-                {
-                    templateComboBox.SelectedItem = state.TemplateMode;
-                    if (templateComboBox.SelectedItem == null)
-                        templateComboBox.SelectedIndex = 0;
-                }
-
-                if (templateComboBox.SelectedItem is string template)
-                    MaskVm.ApplyTemplate(template);
-
-                if (state.MaskParts.Count > 0)
-                {
-                    MaskVm.ClearMaskParts();
-                    foreach (var part in state.MaskParts)
-                    {
-                        if (!string.IsNullOrWhiteSpace(part))
-                            MaskVm.MaskParts.Add(new MaskPart(part));
-                    }
-                }
-
-                MaskVm.CustomText = state.CustomText ?? string.Empty;
-                gridSettings.IsEnabled = MaskVm.IsMaskSettingsEnabled;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка загрузки настроек вкладки: {ex.Message}");
-            }
-            finally
-            {
-                _isApplyingSettings = false;
-            }
-        }
-
-        /// <summary>
-        /// Сохраняет текущее состояние элементов вкладки настроек в JSON-файл в temp-папке пользователя.
-        /// </summary>
-        private void SaveSettingsTabState()
-        {
-            // На старте элементы могут вызывать события до полной инициализации окна.
-            // В этот момент сохранять нельзя, чтобы не перезаписать файл дефолтными значениями.
-            if (_isApplyingSettings || !_isSettingsInitialized)
-                return;
-
-            try
-            {
-                var state = new SettingsTabState
-                {
-                    UserDxfDir = userDirect?.IsChecked == true,
-                    CategorizeMaterial = categorizeMaterial?.IsChecked == true,
-                    CategorizeThickness = categorizeThickness?.IsChecked == true,
-                    CheckGab = checkGab?.IsChecked == true,
-                    TablePath = TablePath?.Text ?? string.Empty,
-                    TemplateMode = templateComboBox?.SelectedItem?.ToString(),
-                    CustomText = txtCustomText?.Text ?? string.Empty,
-                    MaskParts = MaskVm.MaskParts
-                        .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Text))
-                        .Select(x => x.Text)
-                        .ToList()
-                };
-
-                var settingsDir = Path.GetDirectoryName(SettingsFilePath);
-                if (!string.IsNullOrWhiteSpace(settingsDir) && !Directory.Exists(settingsDir))
-                    Directory.CreateDirectory(settingsDir);
-
-                File.WriteAllText(SettingsFilePath, JsonSerializer.Serialize(state, SettingsJsonOptions));
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка сохранения настроек вкладки: {ex.Message}");
-            }
         }
         
         #region Обработка кастомного заголовка
@@ -752,6 +641,22 @@ namespace DxfExporter
             {
                 _quoteTimer?.Stop();
             }
+        }
+        
+        /// <summary>
+        /// Обрабатывает изменения коллекции частей маски и сохраняет состояние вкладки настроек.
+        /// </summary>
+        private void MaskParts_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+        {
+            SaveSettingsTabState();
+        }
+
+        /// <summary>
+        /// Обрабатывает изменение пользовательского текста маски и сохраняет состояние вкладки настроек.
+        /// </summary>
+        private void TxtCustomText_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            SaveSettingsTabState();
         }
 
         #region Обработка выборка маски выгрузки
@@ -2437,8 +2342,7 @@ namespace DxfExporter
                 }
             }
         }
-
-
+        
         /// <summary>
         /// Процесс поиска в таблице
         /// </summary>
@@ -2501,8 +2405,7 @@ namespace DxfExporter
 
             return version?.ToString() ?? "?.?.?.?";
         }
-
-
+        
         /// <summary>
         /// Обновляет тул тип в зависимости от выбранной позиции
         /// </summary>
@@ -2537,11 +2440,107 @@ namespace DxfExporter
             }
 
         }
+        
+        /// <summary>
+        /// Загружает состояние элементов вкладки настроек из внешнего JSON-файла, если он существует.
+        /// </summary>
+        private void LoadSettingsTabState()
+        {
+            if (!File.Exists(SettingsFilePath))
+                return;
 
+            try
+            {
+                var json = File.ReadAllText(SettingsFilePath);
+                var state = JsonSerializer.Deserialize<SettingsTabState>(json);
+                if (state == null)
+                    return;
+
+                _isApplyingSettings = true;
+
+                userDirect.IsChecked = state.UserDxfDir;
+                categorizeMaterial.IsChecked = state.CategorizeMaterial;
+                categorizeThickness.IsChecked = state.CategorizeThickness;
+                checkGab.IsChecked = state.CheckGab;
+
+                string tablePath = string.IsNullOrWhiteSpace(state.TablePath) ? defaultPathTable : state.TablePath;
+                TablePath.Text = File.Exists(tablePath) ? tablePath : defaultPathTable;
+                CheckSettings.PathTable = TablePath.Text;
+
+                if (!string.IsNullOrWhiteSpace(state.TemplateMode))
+                {
+                    templateComboBox.SelectedItem = state.TemplateMode;
+                    if (templateComboBox.SelectedItem == null)
+                        templateComboBox.SelectedIndex = 0;
+                }
+
+                if (templateComboBox.SelectedItem is string template)
+                    MaskVm.ApplyTemplate(template);
+
+                if (state.MaskParts.Count > 0)
+                {
+                    MaskVm.ClearMaskParts();
+                    foreach (var part in state.MaskParts
+                                 .Where(part => !string.IsNullOrWhiteSpace(part)))
+                    {
+                        MaskVm.MaskParts.Add(new MaskPart(part));
+                    }
+                }
+
+                MaskVm.CustomText = state.CustomText ?? string.Empty;
+                gridSettings.IsEnabled = MaskVm.IsMaskSettingsEnabled;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка загрузки настроек вкладки: {ex.Message}");
+            }
+            finally
+            {
+                _isApplyingSettings = false;
+            }
+        }
+
+        /// <summary>
+        /// Сохраняет текущее состояние элементов вкладки настроек в JSON-файл в temp-папке пользователя.
+        /// </summary>
+        private void SaveSettingsTabState()
+        {
+            // На старте элементы могут вызывать события до полной инициализации окна.
+            // В этот момент сохранять нельзя, чтобы не перезаписать файл дефолтными значениями.
+            if (_isApplyingSettings || !_isSettingsInitialized)
+                return;
+
+            try
+            {
+                var state = new SettingsTabState
+                {
+                    UserDxfDir = userDirect?.IsChecked == true,
+                    CategorizeMaterial = categorizeMaterial?.IsChecked == true,
+                    CategorizeThickness = categorizeThickness?.IsChecked == true,
+                    CheckGab = checkGab?.IsChecked == true,
+                    TablePath = TablePath?.Text ?? string.Empty,
+                    TemplateMode = templateComboBox?.SelectedItem?.ToString(),
+                    CustomText = txtCustomText?.Text ?? string.Empty,
+                    MaskParts = MaskVm.MaskParts
+                        .Where(x => x != null && !string.IsNullOrWhiteSpace(x.Text))
+                        .Select(x => x.Text)
+                        .ToList()
+                };
+
+                var settingsDir = Path.GetDirectoryName(SettingsFilePath);
+                if (!string.IsNullOrWhiteSpace(settingsDir) && !Directory.Exists(settingsDir))
+                    Directory.CreateDirectory(settingsDir);
+
+                File.WriteAllText(SettingsFilePath, JsonSerializer.Serialize(state, SettingsJsonOptions));
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка сохранения настроек вкладки: {ex.Message}");
+            }
+        }
 
         #endregion
-
-
+        
     }
 
 }
