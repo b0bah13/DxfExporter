@@ -95,7 +95,7 @@ namespace DxfExporter
         public class CheckFileSettings
         { 
             public bool CheckGab { get; set; } = true;
-            public string PathTable { get; set; } = String.Empty;
+            public string PathTable { get; set; } = defaultPathTable;
         }
 
         /// <summary>
