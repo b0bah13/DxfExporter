@@ -31,6 +31,14 @@
         <!-- Инверсия bool для IsHitTestVisible (чтобы нельзя было кликнуть) -->
         <maskProcess:InvertBooleanConverter x:Key="InvertBooleanConverter"/>
 
+        <Style x:Key="IntegerEditingTextBoxStyle" TargetType="TextBox">
+            <Setter Property="dxfExporter:NumericTextBoxBehavior.InputMode" Value="Integer"/>
+        </Style>
+
+        <Style x:Key="DecimalEditingTextBoxStyle" TargetType="TextBox">
+            <Setter Property="dxfExporter:NumericTextBoxBehavior.InputMode" Value="Decimal"/>
+        </Style>
+
         <!-- Стиль для кнопок управления окном с анимацией -->
         <Style x:Key="WindowControlButton" TargetType="{x:Type Button}">
             <Setter Property="Background" Value="Transparent"/>
@@ -435,10 +443,12 @@
                                                     Binding="{Binding Material}"
                                                     Width="0.8*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}"
-                                                    Binding="{Binding Thickness}"
+                                                    Binding="{Binding Thickness, UpdateSourceTrigger=PropertyChanged}"
+                                                    EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}"
                                                     Width="0.58*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}"
-                                                    Binding="{Binding Quantity}"
+                                                    Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}"
+                                                    EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}"
                                                     Width="0.5*"/>
                                 <DataGridTextColumn Header="Свойства выгрузки"
                                                     Binding="{Binding UnloadProp}"
