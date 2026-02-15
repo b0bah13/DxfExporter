@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -41,6 +42,15 @@ public static class NumericTextBoxBehavior
         new PropertyMetadata(NumericInputMode.None, OnInputModeChanged));
 
     /// <summary>
+    /// Служебный флаг, предотвращающий рекурсивную обработку <see cref="TextBox.TextChanged"/>.
+    /// </summary>
+    private static readonly DependencyProperty IsInternalUpdateProperty = DependencyProperty.RegisterAttached(
+        "IsInternalUpdate",
+        typeof(bool),
+        typeof(NumericTextBoxBehavior),
+        new PropertyMetadata(false));
+
+    /// <summary>
     /// Возвращает режим ввода для указанного объекта.
     /// </summary>
     public static NumericInputMode GetInputMode(DependencyObject obj) => (NumericInputMode)obj.GetValue(InputModeProperty);
@@ -61,6 +71,7 @@ public static class NumericTextBoxBehavior
         }
 
         textBox.PreviewTextInput -= TextBoxOnPreviewTextInput;
+        textBox.TextChanged -= TextBoxOnTextChanged;
         DataObject.RemovePastingHandler(textBox, OnPaste);
 
         if ((NumericInputMode)e.NewValue == NumericInputMode.None)
@@ -69,6 +80,7 @@ public static class NumericTextBoxBehavior
         }
 
         textBox.PreviewTextInput += TextBoxOnPreviewTextInput;
+        textBox.TextChanged += TextBoxOnTextChanged;
         DataObject.AddPastingHandler(textBox, OnPaste);
     }
 
@@ -85,6 +97,37 @@ public static class NumericTextBoxBehavior
         var mode = GetInputMode(textBox);
         var proposedText = GetProposedText(textBox, e.Text);
         e.Handled = !IsValid(proposedText, mode);
+    }
+
+    /// <summary>
+    /// Нормализует текст после изменения, чтобы убрать недопустимые символы,
+    /// даже если они попали в поле в обход <see cref="TextBoxOnPreviewTextInput"/>.
+    /// </summary>
+    private static void TextBoxOnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is not TextBox textBox)
+        {
+            return;
+        }
+
+        if ((bool)textBox.GetValue(IsInternalUpdateProperty))
+        {
+            return;
+        }
+
+        var mode = GetInputMode(textBox);
+        var normalized = NormalizeText(textBox.Text ?? string.Empty, mode);
+
+        if (normalized == textBox.Text)
+        {
+            return;
+        }
+
+        var caret = textBox.CaretIndex;
+        textBox.SetValue(IsInternalUpdateProperty, true);
+        textBox.Text = normalized;
+        textBox.CaretIndex = Math.Min(caret, textBox.Text.Length);
+        textBox.SetValue(IsInternalUpdateProperty, false);
     }
 
     /// <summary>
@@ -149,6 +192,19 @@ public static class NumericTextBoxBehavior
     }
 
     /// <summary>
+    /// Нормализует строку в соответствии с режимом ввода.
+    /// </summary>
+    private static string NormalizeText(string text, NumericInputMode mode)
+    {
+        return mode switch
+        {
+            NumericInputMode.Integer => NormalizeInteger(text),
+            NumericInputMode.Decimal => NormalizeDecimal(text),
+            _ => text
+        };
+    }
+
+    /// <summary>
     /// Проверяет, что строка состоит только из цифр.
     /// </summary>
     private static bool IsInteger(string text)
@@ -165,23 +221,23 @@ public static class NumericTextBoxBehavior
     }
 
     /// <summary>
-    /// Проверяет, что строка является десятичным числом и содержит не более одного регионального разделителя.
+    /// Проверяет, что строка является десятичным числом и содержит не более одного разделителя.
+    /// Допускает как региональный разделитель, так и альтернативный (<c>.</c>/<c>,</c>) во время ввода.
     /// </summary>
     private static bool IsDecimal(string text)
     {
         var separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+        var separatorChar = separator.Length > 0 ? separator[0] : '.';
         var hasSeparator = false;
 
-        for (var i = 0; i < text.Length; i++)
+        foreach (var ch in text)
         {
-            var ch = text[i].ToString();
-
-            if (char.IsDigit(text[i]))
+            if (char.IsDigit(ch))
             {
                 continue;
             }
 
-            if (ch == separator && !hasSeparator)
+            if (IsSeparator(ch, separatorChar) && !hasSeparator)
             {
                 hasSeparator = true;
                 continue;
@@ -191,5 +247,60 @@ public static class NumericTextBoxBehavior
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Удаляет из строки всё, кроме цифр.
+    /// </summary>
+    private static string NormalizeInteger(string text)
+    {
+        var builder = new StringBuilder(text.Length);
+
+        foreach (var ch in text)
+        {
+            if (char.IsDigit(ch))
+            {
+                builder.Append(ch);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Удаляет недопустимые символы и приводит десятичный разделитель к текущей культуре.
+    /// </summary>
+    private static string NormalizeDecimal(string text)
+    {
+        var separator = CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator;
+        var separatorChar = separator.Length > 0 ? separator[0] : '.';
+        var builder = new StringBuilder(text.Length);
+        var hasSeparator = false;
+
+        foreach (var ch in text)
+        {
+            if (char.IsDigit(ch))
+            {
+                builder.Append(ch);
+                continue;
+            }
+
+            if (IsSeparator(ch, separatorChar) && !hasSeparator)
+            {
+                builder.Append(separatorChar);
+                hasSeparator = true;
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// Определяет, является ли символ десятичным разделителем
+    /// (региональным или альтернативным <c>.</c>/<c>,</c>).
+    /// </summary>
+    private static bool IsSeparator(char ch, char cultureSeparator)
+    {
+        return ch == cultureSeparator || ch == '.' || ch == ',';
     }
 }
