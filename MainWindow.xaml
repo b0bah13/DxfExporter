@@ -443,7 +443,7 @@
                                                     Binding="{Binding Material}"
                                                     Width="0.8*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}"
-                                                    Binding="{Binding Thickness, UpdateSourceTrigger=PropertyChanged}"
+                                                    Binding="{Binding Thickness}"
                                                     EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}"
                                                     Width="0.58*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}"
