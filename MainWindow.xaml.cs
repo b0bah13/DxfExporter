@@ -56,6 +56,7 @@ namespace DxfExporter
         private bool _isApplyingSettings;
         private bool _isSettingsInitialized;
         private bool _isColumnWidthSyncSubscribed;
+        private readonly HashSet<DataGrid> _openedDetailsGrids = new();
 
         private static readonly JsonSerializerOptions SettingsJsonOptions = new JsonSerializerOptions
         {
@@ -2369,6 +2370,7 @@ namespace DxfExporter
 
         /// <summary>
         /// Событие загрузки деталей строки (RowDetails).
+        /// Регистрирует вложенную таблицу и сразу синхронизирует её ширину.
         /// </summary>
         private void scanData_LoadingRowDetails(object sender, DataGridRowDetailsEventArgs e)
         {
@@ -2377,23 +2379,38 @@ namespace DxfExporter
             var nestedGrid = FindVisualChild<DataGrid>(detailsRoot);
             if (nestedGrid == null) return;
 
+            _openedDetailsGrids.Add(nestedGrid);
             ApplyBaseColumnsWidthToNested(nestedGrid);
         }
 
         /// <summary>
-        /// Проходит по видимым строкам и синхронизирует ширину колонок вложенных таблиц.
+        /// Событие выгрузки деталей строки (RowDetails).
+        /// Удаляет вложенную таблицу из списка синхронизации.
+        /// </summary>
+        private void scanData_UnloadingRowDetails(object sender, DataGridRowDetailsEventArgs e)
+        {
+            if (e.DetailsElement is not FrameworkElement detailsRoot) return;
+
+            var nestedGrid = FindVisualChild<DataGrid>(detailsRoot);
+            if (nestedGrid == null) return;
+
+            _openedDetailsGrids.Remove(nestedGrid);
+        }
+
+        /// <summary>
+        /// Синхронизирует ширины колонок во всех открытых вложенных таблицах.
         /// </summary>
         private void SyncAllOpenedRowDetailsColumns()
         {
-            if (scanData == null) return;
+            if (_openedDetailsGrids.Count == 0) return;
 
-            foreach (var item in scanData.Items)
+            foreach (var nestedGrid in _openedDetailsGrids.ToList())
             {
-                if (scanData.ItemContainerGenerator.ContainerFromItem(item) is not DataGridRow row) continue;
-                if (row.DetailsVisibility != Visibility.Visible || row.DetailsPresenter == null) continue;
-
-                var nestedGrid = FindVisualChild<DataGrid>(row.DetailsPresenter);
-                if (nestedGrid == null) continue;
+                if (!nestedGrid.IsLoaded)
+                {
+                    _openedDetailsGrids.Remove(nestedGrid);
+                    continue;
+                }
 
                 ApplyBaseColumnsWidthToNested(nestedGrid);
             }

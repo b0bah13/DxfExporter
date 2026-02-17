@@ -212,6 +212,7 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="MinColumnWidth" Value="60"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
 
     </Window.Resources>
@@ -438,7 +439,8 @@
                                   Grid.ColumnSpan="3" CanUserDeleteRows="False"
                                   ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF"
                                   CanUserResizeRows="False"
-                                  LoadingRowDetails="scanData_LoadingRowDetails">
+                                  LoadingRowDetails="scanData_LoadingRowDetails"
+                                  UnloadingRowDetails="scanData_UnloadingRowDetails">
 
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
