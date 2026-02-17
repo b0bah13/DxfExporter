@@ -49,6 +49,7 @@ namespace DxfExporter
 
         private CancellationTokenSource _cts;
         private ScanResult _scanResult;
+        private ObservableCollection<StructureClass> _displayScanData = new();
         private readonly List<TourStep> _tourSteps = new();
         private int _tourIndex;
         private bool _isTourActive;
@@ -913,9 +914,7 @@ namespace DxfExporter
         private void MenuItem_ChangeMaterial_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выбранные строки
-            var selected = scanData.SelectedItems
-                .OfType<StructureClass>()
-                .ToList();
+            var selected = GetSelectedRowsForActions();
             if (!selected.Any()) return;
 
             ChangeMaterial(selected);
@@ -929,9 +928,7 @@ namespace DxfExporter
         private void MenuItem_AddMaterial_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выбранные строки
-            var selected = scanData.SelectedItems
-                .OfType<StructureClass>()
-                .ToList();
+            var selected = GetSelectedRowsForActions();
             if (!selected.Any()) return;
 
             AddMaterial(selected);
@@ -948,7 +945,7 @@ namespace DxfExporter
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
 
-            var selectedRows = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            var selectedRows = GetSelectedRowsForActions();
             if (!selectedRows.Any()) return;
 
             foreach (var row in selectedRows)
@@ -990,7 +987,7 @@ namespace DxfExporter
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
 
-            var selectedRows = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            var selectedRows = GetSelectedRowsForActions();
             if (!selectedRows.Any()) return;
 
             foreach (var row in selectedRows)
@@ -1106,10 +1103,10 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void MenuItem_InvertCheck_Click(object sender, RoutedEventArgs e)
         {
-            var selected = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            var selected = GetSelectedRowsForActions();
             if (selected.Count == 0) return;
 
-            var all = scanData.Items.OfType<StructureClass>().ToList();
+            var all = FlattenForProcessing(_displayScanData).ToList();
 
             // Сбрасываем у всех
             foreach (var row in all)
@@ -1137,13 +1134,31 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void MenuItem_OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            var paths = scanData.SelectedItems.OfType<StructureClass>()
-                .Select(x => x.Path).ToList();
+            var paths = GetSelectedRowsForActions()
+                .Select(x => x.Path)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
 
             if (paths.Count == 0) return;
 
             OpenDocumentsForUser(paths);
         }
+
+
+        /// <summary>
+        /// Возвращает выбранные строки для действий контекстного меню.
+        /// Если выбрана строка-группа expander, в выборку включаются её дочерние исполнения.
+        /// </summary>
+        private List<StructureClass> GetSelectedRowsForActions()
+        {
+            return scanData.SelectedItems
+                .OfType<StructureClass>()
+                .SelectMany(row => row.IsExpanderGroup ? row.GroupMembers : new[] { row })
+                .Distinct()
+                .ToList();
+        }
+
 
         #endregion
 
@@ -1540,15 +1555,16 @@ namespace DxfExporter
 
                 txtStatus.Text = $"Сканирование завершено";
                 
-                scanData.ItemsSource = _scanResult.ScannedData;
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
 
-                foreach (StructureClass structureClass in scanData.ItemsSource)
+                foreach (StructureClass structureClass in FlattenForProcessing(_displayScanData))
                 {
                     structureClass.UpdateUnloadProp();
                 }
 
                 // подсветить детали с ошибками
-                SelectDetails(scanData.ItemsSource as ObservableCollection<StructureClass>);
+                SelectDetails(FlattenForProcessing(_displayScanData));
 
             }
             catch (Exception ex)
@@ -1590,7 +1606,7 @@ namespace DxfExporter
                     return;
                 }
 
-                int unloadCount = (scanData.ItemsSource as ObservableCollection<StructureClass>).Count(structureClass => structureClass.NeedUnload);
+                int unloadCount = FlattenForProcessing(_displayScanData).Count(structureClass => structureClass.NeedUnload);
                 if (unloadCount == 0)
                 {
                     MessageBox.Show("Не выбрана ни одна деталь для выгрузки!", "Нет данных", MessageBoxButton.OK,
@@ -1604,7 +1620,7 @@ namespace DxfExporter
                 // Дать UI возможность обновить интерфейс
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>;
+                var procData = FlattenForProcessing(_displayScanData);
                 var maskData = MaskVm.MaskParts;
                 var modeName = MaskVm.ModeName;
 
@@ -1649,6 +1665,7 @@ namespace DxfExporter
                 case CallSource.Scan:
                     LogTextBox.Clear();
                     scanData.ItemsSource = null;
+                    _displayScanData.Clear();
 
                     OverlayText.Text = CommonConstants.OverlayScan;
                     txtStatus.Text = "Сканирование файла...";
@@ -1762,7 +1779,7 @@ namespace DxfExporter
                 var choiceResult = wpfWin.SelectedMaterials;
                 if (choiceResult == null || choiceResult.Count == 0) return;
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>;
+                var procData = FlattenForProcessing(_displayScanData);
 
                 // Чтобы не было проблем с изменением коллекции во время перебора — 
                 // работаем с копией списка индексов или оригинальных элементов
@@ -1957,27 +1974,28 @@ namespace DxfExporter
                     return;
                 }
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>
-                               ?? new ObservableCollection<StructureClass>();
+                _scanResult ??= new ScanResult();
 
-                //не добавляет уже существующие в таблице детали
+                // Не добавляем уже существующие в таблице детали (с учётом имени состояния/исполнения).
                 foreach (var result in addResult.ScannedData)
                 {
-                    if (!procData.Any(x => x.Path == result.Path))
+                    bool exists = _scanResult.ScannedData.Any(x => x.Path == result.Path && x.MemberName == result.MemberName);
+                    if (!exists)
                     {
-                        procData.Add(result);
+                        _scanResult.ScannedData.Add(result);
                     }
                 }
 
-                scanData.ItemsSource ??= procData;
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
 
-                foreach (StructureClass structureClass in scanData.ItemsSource)
+                foreach (StructureClass structureClass in FlattenForProcessing(_displayScanData))
                 {
                     structureClass.UpdateUnloadProp();
                 }
 
                 // подсветить детали с ошибками
-                SelectDetails(scanData.ItemsSource as ObservableCollection<StructureClass>);
+                SelectDetails(FlattenForProcessing(_displayScanData));
 
                 txtStatus.Text = "Готов к выгрузке dxf";
             }
@@ -2325,8 +2343,10 @@ namespace DxfExporter
         /// Выделяет детали с ошибками в окне
         /// </summary>
         /// <param name="scannedData">Данные сканирования</param>
-        private static void SelectDetails(ObservableCollection<StructureClass>? scannedData)
+        private static void SelectDetails(IEnumerable<StructureClass>? scannedData)
         {
+            if (scannedData == null) return;
+
             foreach (StructureClass structureClass in scannedData)
             {
                 //если ячейка статус не пустая, то добавить перенос строки
@@ -2374,7 +2394,8 @@ namespace DxfExporter
 
             if (string.IsNullOrWhiteSpace(searchText))
             {
-                scanData.ItemsSource = _scanResult.ScannedData;
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
                 return;
             }
 
@@ -2410,9 +2431,73 @@ namespace DxfExporter
                     break;
             }
 
-            scanData.ItemsSource = new ObservableCollection<StructureClass>(filtered);
+            _displayScanData = BuildDisplayScanData(new ObservableCollection<StructureClass>(filtered));
+            scanData.ItemsSource = _displayScanData;
         }
         
+
+
+        /// <summary>
+        /// Формирует коллекцию для отображения в DataGrid.
+        /// Для параметрических и state-деталей создаёт строку-группу с вложенными исполнениями.
+        /// </summary>
+        private ObservableCollection<StructureClass> BuildDisplayScanData(ObservableCollection<StructureClass> source)
+        {
+            var display = new ObservableCollection<StructureClass>();
+
+            var groups = source
+                .GroupBy(x => x.Path)
+                .ToList();
+
+            foreach (var group in groups)
+            {
+                var members = group.ToList();
+                bool hasVersions = members.Count > 1 && members.Any(x => x.IsIPart || x.IsModelStatePart);
+
+                if (!hasVersions)
+                {
+                    display.Add(members.First());
+                    continue;
+                }
+
+                var groupHeader = members.First().Clone();
+                groupHeader.IsExpanderGroup = true;
+                groupHeader.GroupMembers = new ObservableCollection<StructureClass>(members);
+                groupHeader.DisplayName = members.First().DisplayName;
+                groupHeader.Path = string.Empty;
+
+                // TODO: Проверить корректность сбора строк внутри исполнений/состояний для expander.
+                display.Add(groupHeader);
+            }
+
+            return display;
+        }
+
+        /// <summary>
+        /// Возвращает плоский список строк для внутренней логики (экспорт, поиск, статусы).
+        /// </summary>
+        private ObservableCollection<StructureClass> FlattenForProcessing(IEnumerable<StructureClass>? source)
+        {
+            var result = new ObservableCollection<StructureClass>();
+            if (source == null) return result;
+
+            foreach (var row in source)
+            {
+                if (row.IsExpanderGroup)
+                {
+                    foreach (var member in row.GroupMembers)
+                    {
+                        result.Add(member);
+                    }
+                }
+                else
+                {
+                    result.Add(row);
+                }
+            }
+
+            return result;
+        }
         /// <summary>
         /// Получение версии приложения
         /// </summary>

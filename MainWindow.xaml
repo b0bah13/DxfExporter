@@ -430,40 +430,75 @@
                             </DataGrid.RowStyle>
 
                             <DataGrid.Columns>
-                                <DataGridCheckBoxColumn Header="Выгрузить" 
-                                                        Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}"
-                                                        Width="0.66*" />
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}"
-                                                    Binding="{Binding PartNumber}"
-                                                    Width="2.8*"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}"
-                                                    Binding="{Binding Description}"
-                                                    Width="1.8*"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}"
-                                                    Binding="{Binding Material}"
-                                                    Width="0.8*" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}"
-                                                    Binding="{Binding Thickness}"
-                                                    EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}"
-                                                    Width="0.58*"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}"
-                                                    Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}"
-                                                    EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}"
-                                                    Width="0.5*"/>
-                                <DataGridTextColumn Header="Свойства выгрузки"
-                                                    Binding="{Binding UnloadProp}"
-                                                    Width="1.15*" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="Статус"
-                                                    Binding="{Binding Status}"
-                                                    Width="*" IsReadOnly="True" >
-                                    <!-- Включаем перенос текста в ячейке -->
+                                <DataGridTemplateColumn Header="Выгрузить" Width="0.9*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <CheckBox IsChecked="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center">
+                                                    <CheckBox.Style>
+                                                        <Style TargetType="CheckBox">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsExpanderGroup}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </CheckBox.Style>
+                                                </CheckBox>
+                                                <Expander Header="{Binding DisplayName}"
+                                                          FontWeight="SemiBold"
+                                                          >
+                                                    <Expander.Style>
+                                                        <Style TargetType="Expander">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsExpanderGroup}" Value="True">
+                                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Expander.Style>
+                                                    <DataGrid ItemsSource="{Binding GroupMembers}"
+                                                              AutoGenerateColumns="False"
+                                                              CanUserAddRows="False"
+                                                              CanUserDeleteRows="False"
+                                                              Margin="0,6,0,6"
+                                                              HeadersVisibility="Column"
+                                                              BorderBrush="#FFD0D8EE"
+                                                              BorderThickness="1">
+                                                        <DataGrid.Columns>
+                                                            <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.7*"/>
+                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.2*" IsReadOnly="True"/>
+                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.5*" IsReadOnly="True"/>
+                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
+                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.6*"/>
+                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Width="0.6*"/>
+                                                            <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.1*" IsReadOnly="True"/>
+                                                            <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True"/>
+                                                        </DataGrid.Columns>
+                                                    </DataGrid>
+                                                </Expander>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="0.58*"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="0.5*"/>
+                                <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True" >
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Setter Property="TextWrapping" Value="Wrap" />
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-
                             </DataGrid.Columns>
 
                             <!-- Контекстное меню -->

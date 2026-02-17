@@ -55,6 +55,17 @@ namespace DxfExporter.Scanning
         public string DisplayName { get; set; }
 
         /// <summary>
+        /// Признак строки-группы для параметрической детали/детали по состояниям.
+        /// Для таких строк в UI отображается expander с дочерними исполнениями.
+        /// </summary>
+        public bool IsExpanderGroup { get; set; } = false;
+
+        /// <summary>
+        /// Список исполнений/состояний внутри строки-группы.
+        /// </summary>
+        public System.Collections.ObjectModel.ObservableCollection<StructureClass> GroupMembers { get; set; } = new();
+
+        /// <summary>
         /// Свойства выгрузки
         /// </summary>
         public string _unloadProp { get; set; } = string.Empty;
