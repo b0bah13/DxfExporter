@@ -2543,13 +2543,13 @@ namespace DxfExporter
                     break;
                 case HeaderConst.Толщина:
                     filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Thickness.ToString()) &&
-                                    x.Thickness.ToString().ToLower().Contains(searchText)).ToList();
+                        .Where(x => x.Thickness.HasValue &&
+                                    x.Thickness.Value.ToString().ToLower().Contains(searchText)).ToList();
                     break;
                 case HeaderConst.Количество:
                     filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Quantity.ToString()) &&
-                                    x.Quantity.ToString().ToLower().Contains(searchText)).ToList();
+                        .Where(x => x.Quantity.HasValue &&
+                                    x.Quantity.Value.ToString().ToLower().Contains(searchText)).ToList();
                     break;
             }
 
@@ -2567,38 +2567,32 @@ namespace DxfExporter
         {
             var display = new ObservableCollection<StructureClass>();
 
-            var groups = source
-                .GroupBy(x => x.Path)
-                .ToList();
-
-            foreach (var group in groups)
+            foreach (var detail in source)
             {
-                var members = group.ToList();
-                bool isVersionDetail = members.Any(x => x.IsIPart || x.IsModelStatePart);
+                bool hasChildMembers = detail.ChildMembers != null && detail.ChildMembers.Count > 0;
 
-                if (!isVersionDetail)
+                if (!hasChildMembers)
                 {
-                    display.Add(members.First());
+                    display.Add(detail);
                     continue;
                 }
 
-                var groupHeader = members.First().Clone();
+                var groupHeader = detail.Clone();
                 groupHeader.IsExpanderGroup = true;
                 groupHeader.IsExpanded = false;
-                groupHeader.GroupMembers = new ObservableCollection<StructureClass>(members);
-                groupHeader.DisplayName = members.First().DisplayName;
+                groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
+                groupHeader.DisplayName = detail.DisplayName;
 
                 // У строки-заголовка оставляем только имя файла, остальные колонки должны быть пустыми.
                 groupHeader.PartNumber = groupHeader.DisplayName;
                 groupHeader.Description = string.Empty;
                 groupHeader.Material = string.Empty;
-                groupHeader.Thickness = 0;
-                groupHeader.Quantity = 0;
+                groupHeader.Thickness = null;
+                groupHeader.Quantity = null;
                 groupHeader.UnloadProp = string.Empty;
                 groupHeader.Status = string.Empty;
                 groupHeader.Path = string.Empty;
 
-                // TODO: Проверить корректность сбора строк внутри исполнений/состояний для expander.
                 display.Add(groupHeader);
             }
 

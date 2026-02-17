@@ -43,12 +43,12 @@ namespace DxfExporter.Scanning
         /// <summary>
         /// Толщина
         /// </summary>
-        public double Thickness { get; set; }
+        public double? Thickness { get; set; }
         
         /// <summary>
         /// Количество
         /// </summary>
-        public double Quantity { get; set; }
+        public double? Quantity { get; set; }
         
         /// <summary>
         /// Видимое имя детали
@@ -65,6 +65,11 @@ namespace DxfExporter.Scanning
         /// Список исполнений/состояний внутри строки-группы.
         /// </summary>
         public System.Collections.ObjectModel.ObservableCollection<StructureClass> GroupMembers { get; set; } = new();
+
+        /// <summary>
+        /// Дочерние исполнения/состояния, собранные на этапе сканирования детали.
+        /// </summary>
+        public System.Collections.ObjectModel.ObservableCollection<StructureClass> ChildMembers { get; set; } = new();
 
         /// <summary>
         /// Свойства выгрузки

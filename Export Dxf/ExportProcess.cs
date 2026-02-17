@@ -101,8 +101,8 @@ namespace DxfExporter.Export_Dxf
                 [HeaderConst.Обозначение] = s => s.PartNumber ?? "",
                 [HeaderConst.Наименование] = s => s.Description ?? "",
                 [HeaderConst.Материал] = s => s.Material ?? "",
-                [HeaderConst.Толщина] = s => s.Thickness.ToString(),
-                [HeaderConst.Количество] = s => s.Quantity.ToString()
+                [HeaderConst.Толщина] = s => s.Thickness?.ToString() ?? string.Empty,
+                [HeaderConst.Количество] = s => s.Quantity?.ToString() ?? string.Empty
             };
         
 
@@ -264,7 +264,7 @@ namespace DxfExporter.Export_Dxf
                             //если нужно создать подпапку толщина
                             if (ctx.FolderSettings.SubFolderThickness)
                             {
-                                string thick = $"{fileStructure.Thickness} мм";
+                                string thick = $"{fileStructure.Thickness?.ToString() ?? "-"} мм";
                                 dir = Path.Combine(dir, thick);
                             }
 

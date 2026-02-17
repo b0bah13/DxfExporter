@@ -211,7 +211,6 @@
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
-            <Setter Property="MinColumnWidth" Value="60"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
         </Style>
 

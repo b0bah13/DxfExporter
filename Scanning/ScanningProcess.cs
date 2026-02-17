@@ -533,7 +533,7 @@ namespace DxfExporter.Scanning
         /// Заполнение структуры детали
         /// </summary>
         /// <param name="partDoc">Деталь</param>
-        private StructureClass ProcessPart(PartDocument partDoc,string modName,double quantity = 1)
+        private StructureClass ProcessPart(PartDocument partDoc,string modName,double quantity = 1, bool includeChildScan = true)
         {
             SheetMetalComponentDefinition sheetMetalCompDef = (SheetMetalComponentDefinition)partDoc.ComponentDefinition;
 
@@ -581,9 +581,126 @@ namespace DxfExporter.Scanning
                 FakeThickness = realThick == 0 ? false : realThick != thick
             };
             
+            if (includeChildScan && (structure.IsIPart || structure.IsModelStatePart))
+            {
+                // TODO: Проверить корректность обхода и переключения всех исполнений/состояний детали.
+                FillChildMembersForVersionPart(partDoc, structure, quantity);
+            }
+
             _mainWindow.UpdateLog($"Записана в таблицу деталь: {partDoc.DisplayName}");
 
             return structure;
+        }
+
+        /// <summary>
+        /// Собирает дочерние исполнения/состояния для параметрических и model-state деталей.
+        /// </summary>
+        private void FillChildMembersForVersionPart(PartDocument partDoc, StructureClass parentStructure, double quantity)
+        {
+            var variantNames = GetAllVariantNames(partDoc);
+            if (variantNames.Count == 0)
+            {
+                return;
+            }
+
+            string originalMember = partDoc.ModelStateName;
+
+            foreach (string memberName in variantNames)
+            {
+                if (string.IsNullOrWhiteSpace(memberName)) continue;
+                if (string.Equals(memberName, parentStructure.MemberName, StringComparison.OrdinalIgnoreCase)) continue;
+
+                try
+                {
+                    if (!TrySwitchPartToVariant(partDoc, memberName))
+                    {
+                        continue;
+                    }
+
+                    var child = ProcessPart(partDoc, memberName, quantity, includeChildScan: false);
+                    parentStructure.ChildMembers.Add(child);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(ex);
+                }
+            }
+
+            TrySwitchPartToVariant(partDoc, originalMember);
+        }
+
+        /// <summary>
+        /// Пытается получить список всех имён исполнений/состояний детали через reflection,
+        /// чтобы не зависеть от конкретной версии Inventor API.
+        /// </summary>
+        private List<string> GetAllVariantNames(PartDocument partDoc)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                dynamic compDef = partDoc.ComponentDefinition;
+
+                var modelStatesProp = compDef.GetType().GetProperty("ModelStates");
+                var modelStates = modelStatesProp?.GetValue(compDef);
+                if (modelStates is System.Collections.IEnumerable msEnum)
+                {
+                    foreach (var state in msEnum)
+                    {
+                        var name = state?.GetType().GetProperty("Name")?.GetValue(state)?.ToString();
+                        if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
+                    }
+                }
+
+                var iPartFactoryProp = compDef.GetType().GetProperty("iPartFactory");
+                var iPartFactory = iPartFactoryProp?.GetValue(compDef);
+                var tableRows = iPartFactory?.GetType().GetProperty("TableRows")?.GetValue(iPartFactory);
+                if (tableRows is System.Collections.IEnumerable rowsEnum)
+                {
+                    foreach (var row in rowsEnum)
+                    {
+                        var rowType = row?.GetType();
+                        var name = rowType?.GetProperty("MemberName")?.GetValue(row)?.ToString()
+                                   ?? rowType?.GetProperty("PartName")?.GetValue(row)?.ToString();
+                        if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+
+            if (!string.IsNullOrWhiteSpace(partDoc.ModelStateName))
+            {
+                names.Add(partDoc.ModelStateName);
+            }
+
+            return names.ToList();
+        }
+
+        /// <summary>
+        /// Пытается переключить деталь на конкретное исполнение/состояние.
+        /// </summary>
+        private bool TrySwitchPartToVariant(PartDocument partDoc, string memberName)
+        {
+            if (string.IsNullOrWhiteSpace(memberName)) return false;
+
+            try
+            {
+                var modelStateProp = partDoc.GetType().GetProperty("ModelStateName");
+                if (modelStateProp?.CanWrite == true)
+                {
+                    modelStateProp.SetValue(partDoc, memberName);
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex);
+            }
+
+            return false;
         }
 
         /// <summary>
