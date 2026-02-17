@@ -197,6 +197,22 @@
             </Setter>
         </Style>
 
+
+        <!-- Стиль вложенной таблицы исполнений/состояний -->
+        <Style x:Key="NestedScanDataGridStyle" TargetType="{x:Type DataGrid}">
+            <!-- TODO: Здесь можно настраивать внешний вид вложенной таблицы (цвета, шрифты, рамки, высоты строк). -->
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="BorderBrush" Value="#FFD0D8EE"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="GridLinesVisibility" Value="All"/>
+            <Setter Property="MinColumnWidth" Value="60"/>
+        </Style>
+
     </Window.Resources>
 
     <WindowChrome.WindowChrome>
@@ -439,14 +455,11 @@
 
                             <DataGrid.RowDetailsTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="34,4,0,8">
+                                    <!-- TODO: Здесь можно скорректировать отступ вложенной таблицы относительно кнопки раскрытия. -->
+                                    <Grid Margin="34,4,5,8"
+                                          Width="{Binding ElementName=scanData, Path=ActualWidth}">
                                         <DataGrid ItemsSource="{Binding GroupMembers}"
-                                                  AutoGenerateColumns="False"
-                                                  CanUserAddRows="False"
-                                                  CanUserDeleteRows="False"
-                                                  HeadersVisibility="Column"
-                                                  BorderBrush="#FFD0D8EE"
-                                                  BorderThickness="1">
+                                                  Style="{StaticResource NestedScanDataGridStyle}">
                                             <DataGrid.Columns>
                                                 <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.66*" />
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
