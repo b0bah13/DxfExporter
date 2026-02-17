@@ -55,6 +55,7 @@ namespace DxfExporter
         private bool _isTourActive;
         private bool _isApplyingSettings;
         private bool _isSettingsInitialized;
+        private bool _isColumnWidthSyncSubscribed;
 
         private static readonly JsonSerializerOptions SettingsJsonOptions = new JsonSerializerOptions
         {
@@ -158,6 +159,7 @@ namespace DxfExporter
         public MainWindow()
         {
             InitializeComponent();
+            SubscribeMainGridColumnWidthSync();
 
             //DataContext = this;
             DataContext = MaskVm;
@@ -2174,6 +2176,7 @@ namespace DxfExporter
 
         #endregion
 
+
         #region Обработка окна из другого потока
 
         /// <summary>
@@ -2336,6 +2339,108 @@ namespace DxfExporter
         }
 
         #endregion
+
+
+        /// <summary>
+        /// Подписывает базовую таблицу на изменение ширины колонок.
+        /// Это нужно, чтобы вложенные таблицы в раскрытии повторяли текущую ширину столбцов.
+        /// </summary>
+        private void SubscribeMainGridColumnWidthSync()
+        {
+            if (_isColumnWidthSyncSubscribed || scanData == null) return;
+
+            foreach (var column in scanData.Columns)
+            {
+                DependencyPropertyDescriptor
+                    .FromProperty(DataGridColumn.WidthProperty, typeof(DataGridColumn))
+                    ?.AddValueChanged(column, OnMainGridColumnWidthChanged);
+            }
+
+            _isColumnWidthSyncSubscribed = true;
+        }
+
+        /// <summary>
+        /// Обновляет ширины колонок во всех открытых вложенных таблицах.
+        /// </summary>
+        private void OnMainGridColumnWidthChanged(object? sender, EventArgs e)
+        {
+            SyncAllOpenedRowDetailsColumns();
+        }
+
+        /// <summary>
+        /// Событие загрузки деталей строки (RowDetails).
+        /// </summary>
+        private void scanData_LoadingRowDetails(object sender, DataGridRowDetailsEventArgs e)
+        {
+            if (e.DetailsElement is not FrameworkElement detailsRoot) return;
+
+            var nestedGrid = FindVisualChild<DataGrid>(detailsRoot);
+            if (nestedGrid == null) return;
+
+            ApplyBaseColumnsWidthToNested(nestedGrid);
+        }
+
+        /// <summary>
+        /// Проходит по видимым строкам и синхронизирует ширину колонок вложенных таблиц.
+        /// </summary>
+        private void SyncAllOpenedRowDetailsColumns()
+        {
+            if (scanData == null) return;
+
+            foreach (var item in scanData.Items)
+            {
+                if (scanData.ItemContainerGenerator.ContainerFromItem(item) is not DataGridRow row) continue;
+                if (row.DetailsVisibility != Visibility.Visible || row.DetailsPresenter == null) continue;
+
+                var nestedGrid = FindVisualChild<DataGrid>(row.DetailsPresenter);
+                if (nestedGrid == null) continue;
+
+                ApplyBaseColumnsWidthToNested(nestedGrid);
+            }
+        }
+
+        /// <summary>
+        /// Копирует текущую ширину колонок основной таблицы во вложенную таблицу.
+        /// TODO: при необходимости здесь можно привязать не все колонки, а только часть.
+        /// </summary>
+        private void ApplyBaseColumnsWidthToNested(DataGrid nestedGrid)
+        {
+            if (scanData?.Columns == null || nestedGrid?.Columns == null) return;
+
+            int count = Math.Min(scanData.Columns.Count, nestedGrid.Columns.Count);
+            for (int i = 0; i < count; i++)
+            {
+                double width = scanData.Columns[i].ActualWidth;
+                if (width > 0)
+                {
+                    nestedGrid.Columns[i].Width = new DataGridLength(width);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Поиск дочернего визуального элемента заданного типа.
+        /// </summary>
+        private static TChild? FindVisualChild<TChild>(DependencyObject parent) where TChild : DependencyObject
+        {
+            int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childrenCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is TChild typedChild)
+                {
+                    return typedChild;
+                }
+
+                var nested = FindVisualChild<TChild>(child);
+                if (nested != null)
+                {
+                    return nested;
+                }
+            }
+
+            return null;
+        }
 
         #region Обработка окна
 

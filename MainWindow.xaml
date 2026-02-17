@@ -204,7 +204,8 @@
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
             <Setter Property="CanUserDeleteRows" Value="False"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="CanUserResizeRows" Value="False"/>
+            <Setter Property="HeadersVisibility" Value="None"/>
             <Setter Property="BorderBrush" Value="#FFD0D8EE"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
@@ -435,7 +436,9 @@
                                   CanUserAddRows="False" 
                                   AutoGenerateColumns="False" 
                                   Grid.ColumnSpan="3" CanUserDeleteRows="False"
-                                  ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF">
+                                  ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF"
+                                  CanUserResizeRows="False"
+                                  LoadingRowDetails="scanData_LoadingRowDetails">
 
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
@@ -456,7 +459,7 @@
                             <DataGrid.RowDetailsTemplate>
                                 <DataTemplate>
                                     <!-- TODO: Здесь можно скорректировать отступ вложенной таблицы относительно кнопки раскрытия. -->
-                                    <Grid Margin="34,4,5,8"
+                                    <Grid Margin="0,0,0,0"
                                           Width="{Binding ElementName=scanData, Path=ActualWidth}">
                                         <DataGrid ItemsSource="{Binding GroupMembers}"
                                                   Style="{StaticResource NestedScanDataGridStyle}">
@@ -476,7 +479,7 @@
                             </DataGrid.RowDetailsTemplate>
 
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="" Width="0.66*">
+                                <DataGridTemplateColumn Header="Выгрузить" Width="0.66*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -499,18 +502,18 @@
                                                               Width="18"
                                                               Height="18"
                                                               HorizontalAlignment="Center"
-                                                              VerticalAlignment="Center"
-                                                              Content="▸">
+                                                              VerticalAlignment="Center">
                                                     <ToggleButton.Style>
                                                         <Style TargetType="ToggleButton">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
+                                                            <Setter Property="Content" Value="▸"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsExpanderGroup}" Value="True">
                                                                     <Setter Property="Visibility" Value="Visible"/>
                                                                 </DataTrigger>
-                                                                <Trigger Property="IsChecked" Value="True">
+                                                                <DataTrigger Binding="{Binding IsExpanded}" Value="True">
                                                                     <Setter Property="Content" Value="▾"/>
-                                                                </Trigger>
+                                                                </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </ToggleButton.Style>
