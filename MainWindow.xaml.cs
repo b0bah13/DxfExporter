@@ -1154,7 +1154,7 @@ namespace DxfExporter
         {
             return scanData.SelectedItems
                 .OfType<StructureClass>()
-                .SelectMany(row => row.IsExpanderGroup ? row.GroupMembers : new[] { row })
+                .SelectMany(row => row.IsExpanderGroup ? row.GroupMembers : (IEnumerable<StructureClass>)new List<StructureClass> { row })
                 .Distinct()
                 .ToList();
         }
@@ -2452,9 +2452,9 @@ namespace DxfExporter
             foreach (var group in groups)
             {
                 var members = group.ToList();
-                bool hasVersions = members.Count > 1 && members.Any(x => x.IsIPart || x.IsModelStatePart);
+                bool isVersionDetail = members.Any(x => x.IsIPart || x.IsModelStatePart);
 
-                if (!hasVersions)
+                if (!isVersionDetail)
                 {
                     display.Add(members.First());
                     continue;
@@ -2462,8 +2462,18 @@ namespace DxfExporter
 
                 var groupHeader = members.First().Clone();
                 groupHeader.IsExpanderGroup = true;
+                groupHeader.IsExpanded = false;
                 groupHeader.GroupMembers = new ObservableCollection<StructureClass>(members);
                 groupHeader.DisplayName = members.First().DisplayName;
+
+                // У строки-заголовка оставляем только имя файла, остальные колонки должны быть пустыми.
+                groupHeader.PartNumber = groupHeader.DisplayName;
+                groupHeader.Description = string.Empty;
+                groupHeader.Material = string.Empty;
+                groupHeader.Thickness = 0;
+                groupHeader.Quantity = 0;
+                groupHeader.UnloadProp = string.Empty;
+                groupHeader.Status = string.Empty;
                 groupHeader.Path = string.Empty;
 
                 // TODO: Проверить корректность сбора строк внутри исполнений/состояний для expander.

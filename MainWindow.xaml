@@ -419,18 +419,51 @@
                                   CanUserAddRows="False" 
                                   AutoGenerateColumns="False" 
                                   Grid.ColumnSpan="3" CanUserDeleteRows="False"
-                                  ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF"
-                                  >
+                                  ContextMenuOpening="scanData_ContextMenuOpening" BorderBrush="#FF688CAF">
 
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
-                                    <Setter Property="Background" 
-                                            Value="{Binding RowColor}" />
+                                    <Setter Property="Background" Value="{Binding RowColor}" />
+                                    <Setter Property="DetailsVisibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding IsExpanderGroup}" Value="True"/>
+                                                <Condition Binding="{Binding IsExpanded}" Value="True"/>
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="DetailsVisibility" Value="Visible"/>
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
 
+                            <DataGrid.RowDetailsTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="34,4,0,8">
+                                        <DataGrid ItemsSource="{Binding GroupMembers}"
+                                                  AutoGenerateColumns="False"
+                                                  CanUserAddRows="False"
+                                                  CanUserDeleteRows="False"
+                                                  HeadersVisibility="Column"
+                                                  BorderBrush="#FFD0D8EE"
+                                                  BorderThickness="1">
+                                            <DataGrid.Columns>
+                                                <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.66*" />
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.58*"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Width="0.5*"/>
+                                                <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True"/>
+                                            </DataGrid.Columns>
+                                        </DataGrid>
+                                    </Grid>
+                                </DataTemplate>
+                            </DataGrid.RowDetailsTemplate>
+
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="Выгрузить" Width="0.9*">
+                                <DataGridTemplateColumn Header="" Width="0.66*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -448,39 +481,27 @@
                                                         </Style>
                                                     </CheckBox.Style>
                                                 </CheckBox>
-                                                <Expander Header="{Binding DisplayName}"
-                                                          FontWeight="SemiBold"
-                                                          >
-                                                    <Expander.Style>
-                                                        <Style TargetType="Expander">
+
+                                                <ToggleButton IsChecked="{Binding IsExpanded, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                              Width="18"
+                                                              Height="18"
+                                                              HorizontalAlignment="Center"
+                                                              VerticalAlignment="Center"
+                                                              Content="▸">
+                                                    <ToggleButton.Style>
+                                                        <Style TargetType="ToggleButton">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsExpanderGroup}" Value="True">
                                                                     <Setter Property="Visibility" Value="Visible"/>
                                                                 </DataTrigger>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Setter Property="Content" Value="▾"/>
+                                                                </Trigger>
                                                             </Style.Triggers>
                                                         </Style>
-                                                    </Expander.Style>
-                                                    <DataGrid ItemsSource="{Binding GroupMembers}"
-                                                              AutoGenerateColumns="False"
-                                                              CanUserAddRows="False"
-                                                              CanUserDeleteRows="False"
-                                                              Margin="0,6,0,6"
-                                                              HeadersVisibility="Column"
-                                                              BorderBrush="#FFD0D8EE"
-                                                              BorderThickness="1">
-                                                        <DataGrid.Columns>
-                                                            <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.7*"/>
-                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.2*" IsReadOnly="True"/>
-                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.5*" IsReadOnly="True"/>
-                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
-                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.6*"/>
-                                                            <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Width="0.6*"/>
-                                                            <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.1*" IsReadOnly="True"/>
-                                                            <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True"/>
-                                                        </DataGrid.Columns>
-                                                    </DataGrid>
-                                                </Expander>
+                                                    </ToggleButton.Style>
+                                                </ToggleButton>
                                             </Grid>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
@@ -504,57 +525,17 @@
                             <!-- Контекстное меню -->
                             <DataGrid.ContextMenu>
                                 <ContextMenu Opened="ContextMenu_Opened">
-                                    <!-- Обычный пункт меню -->
-                                    <MenuItem Header="Изменить материал"
-                                              Click="MenuItem_ChangeMaterial_Click"/>
-                                    <MenuItem Header="Добавить материал"
-                                              Click="MenuItem_AddMaterial_Click"/>
+                                    <MenuItem Header="Изменить материал" Click="MenuItem_ChangeMaterial_Click"/>
+                                    <MenuItem Header="Добавить материал" Click="MenuItem_AddMaterial_Click"/>
                                     <Separator/>
 
-                                    <!-- Чекбоксы – управляют выбранными строками -->
-                                    <MenuItem Header="Выгрузить"
-                                              IsCheckable="True"
-                                              Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"
-                                              ToolTip="Свойство указывающее будет ли выгружен DXF"
-                                              ToolTipService.InitialShowDelay="400"
-                                              Tag="NeedUnload"/>
-
-                                    <MenuItem Header="Гравировка"
-                                              IsCheckable="True"
-                                              Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"
-                                              ToolTip="Свойство указывающее будет ли выгружена гравировка"
-                                              ToolTipService.InitialShowDelay="400"
-                                              Tag="NeedGrav"/>
-
-                                    <MenuItem Header="Линии гиба"
-                                              Tag="NeedBendLine"
-                                              IsCheckable="True"
-                                              Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"
-                                              ToolTip="Свойство указывающее будут ли выгружены линии гиба"
-                                              ToolTipService.InitialShowDelay="400"
-                                              />
-
-                                    <MenuItem Header="Выгрузить в шаблон"
-                                              Tag="UnloadInTemplate"
-                                              IsCheckable="True"
-                                              Checked="Menu_Checked_General"
-                                              Unchecked="Menu_Unchecked_General"
-                                              ToolTip="Свойство указывающее будет ли выгружен DXF в папку 'Шаблоны'"
-                                              ToolTipService.InitialShowDelay="400"/>
+                                    <MenuItem Header="Выгрузить" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF" ToolTipService.InitialShowDelay="400" Tag="NeedUnload"/>
+                                    <MenuItem Header="Гравировка" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружена гравировка" ToolTipService.InitialShowDelay="400" Tag="NeedGrav"/>
+                                    <MenuItem Header="Линии гиба" Tag="NeedBendLine" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будут ли выгружены линии гиба" ToolTipService.InitialShowDelay="400"/>
+                                    <MenuItem Header="Выгрузить в шаблон" Tag="UnloadInTemplate" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF в папку 'Шаблоны'" ToolTipService.InitialShowDelay="400"/>
                                     <Separator/>
-                                    <MenuItem Header="Оставить выбранные"
-                                              Click="MenuItem_InvertCheck_Click"
-                                              ToolTip="Оставляет свойство 'Выгрузить' только у выбранных строк"
-                                              ToolTipService.InitialShowDelay="400"
-                                              />
-
-                                    <MenuItem Header="Открыть деталь"
-                                              Click="MenuItem_OpenFile_Click"
-                                    />
-
+                                    <MenuItem Header="Оставить выбранные" Click="MenuItem_InvertCheck_Click" ToolTip="Оставляет свойство 'Выгрузить' только у выбранных строк" ToolTipService.InitialShowDelay="400"/>
+                                    <MenuItem Header="Открыть деталь" Click="MenuItem_OpenFile_Click"/>
                                 </ContextMenu>
                             </DataGrid.ContextMenu>
 

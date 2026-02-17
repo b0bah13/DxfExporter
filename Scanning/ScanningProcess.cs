@@ -161,7 +161,7 @@ namespace DxfExporter.Scanning
                             cancellationToken.ThrowIfCancellationRequested();
 
                             PartDocument pDoc = occStructure.Occurrence.Definition.Document;
-                            modName = occStructure.Occurrence.ActiveModelState;
+                            modName = occStructure.MemberName;
                             result.AddNode(ProcessPart(pDoc, modName, occStructure.Quantity));
                         }
 
@@ -426,7 +426,8 @@ namespace DxfExporter.Scanning
                         {
                             Path = componentOccurrence.ReferencedDocumentDescriptor.FullDocumentName,
                             Quantity = 1,
-                            Occurrence = componentOccurrence
+                            Occurrence = componentOccurrence,
+                            MemberName = componentOccurrence.ActiveModelState ?? string.Empty
                         };
 
                         occResult.AddNode(structure);

@@ -21,7 +21,7 @@ namespace DxfExporter.Scanning
         {
             if (node == null) { return; }
 
-            var existing = ScannedOcc.FirstOrDefault(x => x.Path == node.Path);
+            var existing = ScannedOcc.FirstOrDefault(x => x.Path == node.Path && x.MemberName == node.MemberName);
 
             if (existing != null)
             {

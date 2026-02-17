@@ -13,6 +13,7 @@ namespace DxfExporter.Scanning
         /// Флаг указывающий нужно ли выгрузить dxf
         /// </summary>
         private bool _needUnload = true;
+        private bool _isExpanded = false;
 
         /// <summary>
         /// Обозначение элемента.
@@ -195,6 +196,22 @@ namespace DxfExporter.Scanning
                 {
                     _needUnload = value;
                     OnPropertyChanged(nameof(NeedUnload));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Состояние раскрытия строки-группы.
+        /// </summary>
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded != value)
+                {
+                    _isExpanded = value;
+                    OnPropertyChanged(nameof(IsExpanded));
                 }
             }
         }
