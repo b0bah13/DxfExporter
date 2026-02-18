@@ -1174,9 +1174,39 @@ namespace DxfExporter
 
         private static DataGrid? ResolveContextDataGrid(object sender)
         {
-            if (sender is FrameworkElement element && element.ContextMenu?.PlacementTarget is DataGrid menuGrid)
+            if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is DataGrid targetGrid)
             {
-                return menuGrid;
+                return targetGrid;
+            }
+
+            if (sender is DependencyObject dependencyObject)
+            {
+                var contextMenuFromParent = FindParentContextMenu(dependencyObject);
+                if (contextMenuFromParent?.PlacementTarget is DataGrid menuGrid)
+                {
+                    return menuGrid;
+                }
+            }
+
+            return null;
+        }
+
+        private static ContextMenu? FindParentContextMenu(DependencyObject? start)
+        {
+            DependencyObject? current = start;
+            while (current != null)
+            {
+                if (current is ContextMenu contextMenu)
+                {
+                    return contextMenu;
+                }
+
+                current = current switch
+                {
+                    FrameworkElement frameworkElement => frameworkElement.Parent,
+                    FrameworkContentElement frameworkContentElement => frameworkContentElement.Parent,
+                    _ => null
+                };
             }
 
             return null;
