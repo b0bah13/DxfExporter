@@ -472,8 +472,30 @@
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.58*"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Width="0.5*"/>
                                                 <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True">
+                                                    <DataGridTextColumn.ElementStyle>
+                                                        <Style TargetType="{x:Type TextBlock}">
+                                                            <Setter Property="TextWrapping" Value="Wrap" />
+                                                        </Style>
+                                                    </DataGridTextColumn.ElementStyle>
+                                                </DataGridTextColumn>
                                             </DataGrid.Columns>
+
+                                            <DataGrid.ContextMenu>
+                                                <ContextMenu Opened="ContextMenu_Opened">
+                                                    <MenuItem Header="Изменить материал" Click="MenuItem_ChangeMaterial_Click"/>
+                                                    <!-- <MenuItem Header="Добавить материал" Click="MenuItem_AddMaterial_Click"/> -->
+                                                    <Separator/>
+
+                                                    <MenuItem Header="Выгрузить" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF" ToolTipService.InitialShowDelay="400" Tag="NeedUnload"/>
+                                                    <MenuItem Header="Гравировка" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружена гравировка" ToolTipService.InitialShowDelay="400" Tag="NeedGrav"/>
+                                                    <MenuItem Header="Линии гиба" Tag="NeedBendLine" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будут ли выгружены линии гиба" ToolTipService.InitialShowDelay="400"/>
+                                                    <MenuItem Header="Выгрузить в шаблон" Tag="UnloadInTemplate" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF в папку 'Шаблоны'" ToolTipService.InitialShowDelay="400"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Оставить выбранные" Click="MenuItem_InvertCheck_Click" ToolTip="Оставляет свойство 'Выгрузить' только у выбранных строк" ToolTipService.InitialShowDelay="400"/>
+                                                    <MenuItem Header="Открыть деталь" Click="MenuItem_OpenFile_Click"/>
+                                                </ContextMenu>
+                                            </DataGrid.ContextMenu>
                                         </DataGrid>
                                     </Grid>
                                 </DataTemplate>

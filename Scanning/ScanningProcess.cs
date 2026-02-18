@@ -618,6 +618,7 @@ namespace DxfExporter.Scanning
                 Thickness = null,
                 Quantity = null,
                 DisplayName = string.Empty,
+                NeedUnload = false,
                 //UnloadProp = String.Empty, - по умолчанию
                 //Status = String.Empty, - по умолчанию
                 //NeedGrav = true, - по умолчанию

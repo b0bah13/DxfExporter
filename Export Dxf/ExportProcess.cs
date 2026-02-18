@@ -187,6 +187,13 @@ namespace DxfExporter.Export_Dxf
                         continue;
                     }
 
+                    //проверка есть ли такой путь
+                    if (string.IsNullOrEmpty(fileStructure.Path) || !Path.Exists(fileStructure.Path))
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {fileStructure.DisplayName}");
+                        continue;
+                    }
+
                     bool wasOpened = false;
 
                     PartDocument pDoc = CommonOperations.GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);

@@ -2471,16 +2471,22 @@ namespace DxfExporter
 
             foreach (StructureClass structureClass in scannedData)
             {
-                //если ячейка статус не пустая, то добавить перенос строки
-                if (!string.IsNullOrWhiteSpace(structureClass.Status))
+                if (structureClass.IsExpanderGroup && structureClass.ChildMembers?.Count > 0)
                 {
-                    structureClass.Status += "\n";
+                    SelectDetails(structureClass.ChildMembers);
+                    continue;
                 }
-
+                
                 if (string.IsNullOrEmpty(structureClass.Path))
                 {
                     structureClass.RowColor = System.Windows.Media.Brushes.OrangeRed;
                     continue;
+                }
+
+                //если ячейка статус не пустая, то добавить перенос строки
+                if (!string.IsNullOrWhiteSpace(structureClass.Status))
+                {
+                    structureClass.Status += "\n";
                 }
 
                 if (structureClass.NoFlat)
