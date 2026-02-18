@@ -7,6 +7,7 @@
         public const string OverlayProcessScan = "Сканируется деталь:";
         public const string OverlayProcessScanAsm = "Сканируется сборка:";
         public const string OverlayProcessData = "Пожалуйста, подождите\r\nЗаполняется таблица";
+        public const string OverlayProcessDataIpart = "Обработка детали:";
         public const string OverlayDxf = "Пожалуйста, подождите\r\nВыгружаются Dxf";
         public const string OverlayProcessDxf = "Создаётся Dxf детали:";
 

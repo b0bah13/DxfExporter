@@ -1157,7 +1157,7 @@ namespace DxfExporter
         {
             return scanData.SelectedItems
                 .OfType<StructureClass>()
-                .SelectMany(row => row.IsExpanderGroup ? row.GroupMembers : (IEnumerable<StructureClass>)new List<StructureClass> { row })
+                .SelectMany(row => row.IsExpanderGroup ? row.ChildMembers : (IEnumerable<StructureClass>)new List<StructureClass> { row })
                 .Distinct()
                 .ToList();
         }
@@ -2477,6 +2477,12 @@ namespace DxfExporter
                     structureClass.Status += "\n";
                 }
 
+                if (string.IsNullOrEmpty(structureClass.Path))
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.OrangeRed;
+                    continue;
+                }
+
                 if (structureClass.NoFlat)
                 {
                     structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
@@ -2580,7 +2586,7 @@ namespace DxfExporter
                 var groupHeader = detail.Clone();
                 groupHeader.IsExpanderGroup = true;
                 groupHeader.IsExpanded = false;
-                groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
+                //groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
                 groupHeader.DisplayName = detail.DisplayName;
 
                 // У строки-заголовка оставляем только имя файла, остальные колонки должны быть пустыми.
@@ -2611,7 +2617,7 @@ namespace DxfExporter
             {
                 if (row.IsExpanderGroup)
                 {
-                    foreach (var member in row.GroupMembers)
+                    foreach (var member in row.ChildMembers) //.GroupMembers)
                     {
                         result.Add(member);
                     }

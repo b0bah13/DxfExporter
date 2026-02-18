@@ -11,6 +11,8 @@ using System.Windows.Controls;
 using DxfExporter.Export_Dxf;
 using static DxfExporter.MainWindow;
 using System.Windows.Media.Animation;
+using System.Xml.Linq;
+using Path = System.IO.Path;
 
 namespace DxfExporter.Scanning
 {
@@ -18,6 +20,7 @@ namespace DxfExporter.Scanning
     {
         private readonly MainWindow _mainWindow;
         private Inventor.Application _invApp = null;
+        private Document _scanDoc = null;
         private double _percent;
 
         //для ограничения отправки писем
@@ -103,6 +106,7 @@ namespace DxfExporter.Scanning
             ScanResult result = new ScanResult();
 
             Document doc = _invApp.ActiveDocument;
+            _scanDoc = doc;
 
             try
             {
@@ -493,8 +497,6 @@ namespace DxfExporter.Scanning
                         // пропускаем сборку если в ней нет деталей
                         if (asmDoc.ComponentDefinition.Occurrences.Count == 0) { continue; }
 
-
-
                         _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessScanAsm, asmDoc.DisplayName);
 
                         TraverseOccurrences(cancellationToken, asmDoc, result);
@@ -583,8 +585,14 @@ namespace DxfExporter.Scanning
             
             if (includeChildScan && (structure.IsIPart || structure.IsModelStatePart))
             {
+                _mainWindow.UpdateOverlay(true);
+                _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDataIpart, partDoc.DisplayName);
+
                 // TODO: Проверить корректность обхода и переключения всех исполнений/состояний детали.
                 FillChildMembersForVersionPart(partDoc, structure, quantity);
+
+                _mainWindow.UpdateOverlay(false);
+                _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessData);
             }
 
             _mainWindow.UpdateLog($"Записана в таблицу деталь: {partDoc.DisplayName}");
@@ -593,114 +601,143 @@ namespace DxfExporter.Scanning
         }
 
         /// <summary>
+        /// Заполнение структуры не существующей детали (для исполнений)
+        /// </summary>
+        /// <param name="memberPath">Путь до исполнения</param>
+        private StructureClass ProcessPart(string memberPath)
+        {
+            string name = Path.GetFileNameWithoutExtension(memberPath);
+            //Создание структуры
+            StructureClass structure = new StructureClass
+            {
+                //NeedUnload = true, - по умолчанию
+                PartNumber = name,
+                Description = string.Empty,
+                Path = string.Empty,
+                Material = string.Empty,
+                Thickness = null,
+                Quantity = null,
+                DisplayName = string.Empty,
+                //UnloadProp = String.Empty, - по умолчанию
+                //Status = String.Empty, - по умолчанию
+                //NeedGrav = true, - по умолчанию
+                //NeedBendLine = false, - по умолчанию
+                //UnloadInTemplate = false, - по умолчанию
+                IsIPart = true,
+                IsModelStatePart = false,
+                MemberName = string.Empty,
+                //UnloadAllVers = false - по умолчанию
+                NoFlat = true,
+                NullFlat = true,
+                BigFlat = false,
+                ErrorMatThick = false,
+                FakeThickness = false,
+                Status = "Данное исполнение не выгружено!"
+            };
+
+            return structure;
+        }
+
+
+        /// <summary>
         /// Собирает дочерние исполнения/состояния для параметрических и model-state деталей.
         /// </summary>
         private void FillChildMembersForVersionPart(PartDocument partDoc, StructureClass parentStructure, double quantity)
         {
-            var variantNames = GetAllVariantNames(partDoc);
-            if (variantNames.Count == 0)
-            {
-                return;
-            }
-
-            string originalMember = partDoc.ModelStateName;
-
-            foreach (string memberName in variantNames)
-            {
-                if (string.IsNullOrWhiteSpace(memberName)) continue;
-                if (string.Equals(memberName, parentStructure.MemberName, StringComparison.OrdinalIgnoreCase)) continue;
-
-                try
-                {
-                    if (!TrySwitchPartToVariant(partDoc, memberName))
-                    {
-                        continue;
-                    }
-
-                    var child = ProcessPart(partDoc, memberName, quantity, includeChildScan: false);
-                    parentStructure.ChildMembers.Add(child);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(ex);
-                }
-            }
-
-            TrySwitchPartToVariant(partDoc, originalMember);
-        }
-
-        /// <summary>
-        /// Пытается получить список всех имён исполнений/состояний детали через reflection,
-        /// чтобы не зависеть от конкретной версии Inventor API.
-        /// </summary>
-        private List<string> GetAllVariantNames(PartDocument partDoc)
-        {
-            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            bool wasOpened = false;
+            PartDocument pDoc = null;
+            _invApp.SilentOperation = true;
 
             try
             {
-                dynamic compDef = partDoc.ComponentDefinition;
-
-                var modelStatesProp = compDef.GetType().GetProperty("ModelStates");
-                var modelStates = modelStatesProp?.GetValue(compDef);
-                if (modelStates is System.Collections.IEnumerable msEnum)
+                if (parentStructure.IsModelStatePart)
                 {
-                    foreach (var state in msEnum)
+                    pDoc = CommonOperations.NeedOpenedFile(_invApp, partDoc.FullFileName, out wasOpened);
+
+                    foreach (ModelState modelState in (pDoc.ComponentDefinition as SheetMetalComponentDefinition).ModelStates)
                     {
-                        var name = state?.GetType().GetProperty("Name")?.GetValue(state)?.ToString();
-                        if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
+                        modelState.Activate();
+                        var child = ProcessPart(pDoc, modelState.Name, quantity, includeChildScan: false);
+                        parentStructure.ChildMembers.Add(child);
                     }
                 }
-
-                var iPartFactoryProp = compDef.GetType().GetProperty("iPartFactory");
-                var iPartFactory = iPartFactoryProp?.GetValue(compDef);
-                var tableRows = iPartFactory?.GetType().GetProperty("TableRows")?.GetValue(iPartFactory);
-                if (tableRows is System.Collections.IEnumerable rowsEnum)
+                else if (parentStructure.IsIPart)
                 {
-                    foreach (var row in rowsEnum)
+                    List<string> memberList = GetMember(partDoc);
+                    if (memberList.Count == 0) return;
+
+                    foreach (string memberPath in memberList)
                     {
-                        var rowType = row?.GetType();
-                        var name = rowType?.GetProperty("MemberName")?.GetValue(row)?.ToString()
-                                   ?? rowType?.GetProperty("PartName")?.GetValue(row)?.ToString();
-                        if (!string.IsNullOrWhiteSpace(name)) names.Add(name);
+                        if (!Path.Exists(memberPath))
+                        {
+                            var nullChild = ProcessPart(memberPath);
+                            parentStructure.ChildMembers.Add(nullChild);
+                            continue;
+                        }
+
+                        var subDoc = CommonOperations.NeedOpenedFile(_invApp, memberPath, out wasOpened);
+
+                        var child = ProcessPart(subDoc, subDoc.ModelStateName, quantity, includeChildScan: false);
+                        parentStructure.ChildMembers.Add(child);
+
+                        //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
+                        if (subDoc != null && subDoc?.FullFileName != _scanDoc.FullFileName && wasOpened)
+                        {
+                            CommonOperations.ReleaseObject(subDoc);
+                            wasOpened = false;
+                        }
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Debug.WriteLine(ex);
+                Debug.WriteLine(e);
+                throw;
             }
-
-            if (!string.IsNullOrWhiteSpace(partDoc.ModelStateName))
+            finally
             {
-                names.Add(partDoc.ModelStateName);
+                //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
+                if (pDoc != null && pDoc?.FullFileName != _scanDoc.FullFileName && wasOpened)
+                {
+                    CommonOperations.ReleaseObject(pDoc);
+                }
+                _invApp.SilentOperation = false;
             }
-
-            return names.ToList();
         }
-
+        
         /// <summary>
-        /// Пытается переключить деталь на конкретное исполнение/состояние.
+        /// Получает список путей до исполнений параметрической детали. 
         /// </summary>
-        private bool TrySwitchPartToVariant(PartDocument partDoc, string memberName)
+        /// <param name="partDoc">Параметрическая деталь.</param>
+        /// <returns>Список путей до исполнений.</returns>
+        private List<string> GetMember(PartDocument partDoc)
         {
-            if (string.IsNullOrWhiteSpace(memberName)) return false;
+            List<string> membersPath = new List<string>();
+            PartDocument? factoryDoc = null;
 
-            try
+            SheetMetalComponentDefinition compDef = partDoc.ComponentDefinition as SheetMetalComponentDefinition;
+            if (compDef.IsiPartMember)
             {
-                var modelStateProp = partDoc.GetType().GetProperty("ModelStateName");
-                if (modelStateProp?.CanWrite == true)
-                {
-                    modelStateProp.SetValue(partDoc, memberName);
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex);
+                factoryDoc = compDef.iPartMember.ReferencedDocumentDescriptor.ReferencedDocument as PartDocument;
             }
 
-            return false;
+            if (compDef.IsiPartFactory)
+            {
+                factoryDoc = partDoc;
+            }
+
+            string dirPath = factoryDoc.ComponentDefinition.iPartFactory.MemberCacheDir;
+
+            foreach (iPartTableCell o in factoryDoc.ComponentDefinition.iPartFactory.FileNameColumn)
+            {
+                //замена запрещёных символов через словарь
+                string memberName = CommonOperations.ReplaceDictionary
+                    .Aggregate(o.Value, (current, kvp) => current.Replace(kvp.Key, kvp.Value));
+
+                membersPath.Add(Path.Combine(dirPath,memberName)+".ipt");
+            }
+
+            return membersPath;
         }
 
         /// <summary>

@@ -388,7 +388,7 @@ namespace DxfExporter.Export_Dxf
                         //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
                         if (pDoc.FullFileName != ctx.ScanFilePath && wasOpened)
                         {
-                            ReleaseObject(pDoc);
+                            CommonOperations.ReleaseObject(pDoc);
                         }
                     }
                     
@@ -536,23 +536,6 @@ namespace DxfExporter.Export_Dxf
             }
 
             return drawingsDir;
-        }
-
-        /// <summary>
-        /// Закрываем файлы, очищаем ресурсы.
-        /// </summary>
-        /// <param name="doc">Файл который нужно закрыть. Передаваем динамически</param>
-        private void ReleaseObject(dynamic doc)
-        {
-            try
-            {
-                doc?.Close();
-                if (doc != null) Marshal.ReleaseComObject(doc);
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
         }
 
         /// <summary>

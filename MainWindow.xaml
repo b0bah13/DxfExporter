@@ -462,7 +462,7 @@
                                     <!-- TODO: Здесь можно скорректировать отступ вложенной таблицы относительно кнопки раскрытия. -->
                                     <Grid Margin="0,0,0,0"
                                           Width="{Binding ElementName=scanData, Path=ActualWidth}">
-                                        <DataGrid ItemsSource="{Binding GroupMembers}"
+                                        <DataGrid ItemsSource="{Binding ChildMembers}"
                                                   Style="{StaticResource NestedScanDataGridStyle}">
                                             <DataGrid.Columns>
                                                 <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.66*" />
