@@ -216,6 +216,7 @@
                 <Setter.Value>
                     <Style TargetType="{x:Type DataGridRow}">
                         <Setter Property="Background" Value="{Binding RowColor}"/>
+                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
                     </Style>
                 </Setter.Value>
             </Setter>
@@ -451,6 +452,7 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
                                     <Setter Property="Background" Value="{Binding RowColor}" />
+                                    <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
                                     <Setter Property="DetailsVisibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <MultiDataTrigger>

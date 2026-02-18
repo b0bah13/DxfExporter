@@ -1063,6 +1063,58 @@ namespace DxfExporter
         }
 
         /// <summary>
+        /// Для обычного клика по строке очищает выделение в остальных таблицах.
+        /// Это синхронизирует поведение основной и вложенных таблиц как у единого выбора.
+        /// </summary>
+        private void DataGridRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                return;
+            }
+
+            if (sender is not DataGridRow row)
+            {
+                return;
+            }
+
+            var ownerGrid = ItemsControl.ItemsControlFromItemContainer(row) as DataGrid;
+            if (ownerGrid == null)
+            {
+                return;
+            }
+
+            ClearSelectionInOtherGrids(ownerGrid);
+        }
+
+        private void ClearSelectionInOtherGrids(DataGrid activeGrid)
+        {
+            if (!ReferenceEquals(scanData, activeGrid) && scanData.SelectedItems.Count > 0)
+            {
+                scanData.SelectedItems.Clear();
+            }
+
+            foreach (var nestedGrid in _openedDetailsGrids.ToList())
+            {
+                if (nestedGrid == null || !nestedGrid.IsLoaded)
+                {
+                    _openedDetailsGrids.Remove(nestedGrid);
+                    continue;
+                }
+
+                if (ReferenceEquals(nestedGrid, activeGrid))
+                {
+                    continue;
+                }
+
+                if (nestedGrid.SelectedItems.Count > 0)
+                {
+                    nestedGrid.SelectedItems.Clear();
+                }
+            }
+        }
+
+        /// <summary>
         /// Срабатывает каждый раз при открытии контекстного меню
         /// Здесь мы синхронизируем состояние чекбоксов с первой выбранной строкой
         /// </summary>
