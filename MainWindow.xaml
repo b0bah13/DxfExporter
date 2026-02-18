@@ -212,6 +212,13 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="RowStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type DataGridRow}">
+                        <Setter Property="Background" Value="{Binding RowColor}"/>
+                    </Style>
+                </Setter.Value>
+            </Setter>
         </Style>
 
     </Window.Resources>
@@ -463,7 +470,8 @@
                                     <Grid Margin="0,0,0,0"
                                           Width="{Binding ElementName=scanData, Path=ActualWidth}">
                                         <DataGrid ItemsSource="{Binding ChildMembers}"
-                                                  Style="{StaticResource NestedScanDataGridStyle}">
+                                                  Style="{StaticResource NestedScanDataGridStyle}"
+                                                  ContextMenuOpening="scanData_ContextMenuOpening">
                                             <DataGrid.Columns>
                                                 <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.66*" />
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
@@ -474,6 +482,22 @@
                                                 <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True"/>
                                             </DataGrid.Columns>
+
+                                            <DataGrid.ContextMenu>
+                                                <ContextMenu Opened="ContextMenu_Opened">
+                                                    <MenuItem Header="Изменить материал" Click="MenuItem_ChangeMaterial_Click"/>
+                                                    <MenuItem Header="Добавить материал" Click="MenuItem_AddMaterial_Click"/>
+                                                    <Separator/>
+
+                                                    <MenuItem Header="Выгрузить" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF" ToolTipService.InitialShowDelay="400" Tag="NeedUnload"/>
+                                                    <MenuItem Header="Гравировка" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружена гравировка" ToolTipService.InitialShowDelay="400" Tag="NeedGrav"/>
+                                                    <MenuItem Header="Линии гиба" Tag="NeedBendLine" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будут ли выгружены линии гиба" ToolTipService.InitialShowDelay="400"/>
+                                                    <MenuItem Header="Выгрузить в шаблон" Tag="UnloadInTemplate" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF в папку 'Шаблоны'" ToolTipService.InitialShowDelay="400"/>
+                                                    <Separator/>
+                                                    <MenuItem Header="Оставить выбранные" Click="MenuItem_InvertCheck_Click" ToolTip="Оставляет свойство 'Выгрузить' только у выбранных строк" ToolTipService.InitialShowDelay="400"/>
+                                                    <MenuItem Header="Открыть деталь" Click="MenuItem_OpenFile_Click"/>
+                                                </ContextMenu>
+                                            </DataGrid.ContextMenu>
                                         </DataGrid>
                                     </Grid>
                                 </DataTemplate>
