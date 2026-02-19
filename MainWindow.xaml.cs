@@ -1339,6 +1339,7 @@ namespace DxfExporter
         {
             // Очищаем предыдущую последовательность шагов.
             _tourSteps.Clear();
+            //№0
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1346,6 +1347,7 @@ namespace DxfExporter
                 Title = "Сканирование",
                 Description = "Запускает сканирование выбранной сборки или детали."
             });
+            //№1
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1353,6 +1355,7 @@ namespace DxfExporter
                 Title = "Добавление файлов",
                 Description = "Добавляет в таблицу открытые листовые детали."
             });
+            //№2
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1360,6 +1363,7 @@ namespace DxfExporter
                 Title = "Добавление файлов",
                 Description = "Добавляет в таблицу листовые детали выбранные пользователем из папки."
             });
+            //№3
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1367,6 +1371,7 @@ namespace DxfExporter
                 Title = "Очистка",
                 Description = "Очищает таблицу."
             });
+            //№4
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1374,6 +1379,7 @@ namespace DxfExporter
                 Title = "Создание DXF",
                 Description = "Создаёт DXF для выбранных позиций в таблице."
             });
+            //№5
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1381,6 +1387,7 @@ namespace DxfExporter
                 Title = "Открыть папку",
                 Description = "Открывает папку с выгруженными развёртками."
             });
+            //№6
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1388,6 +1395,7 @@ namespace DxfExporter
                 Title = "Поиск",
                 Description = "Введите текст, чтобы отфильтровать таблицу по выбранному столбцу."
             });
+            //№7
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1395,6 +1403,7 @@ namespace DxfExporter
                 Title = "Столбец поиска",
                 Description = "Выберите, по какому столбцу искать совпадения."
             });
+            //№8
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1402,6 +1411,7 @@ namespace DxfExporter
                 Title = "Очистка",
                 Description = "Сбрасывает строку поиска и возвращает полный список."
             });
+            //№9
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1419,6 +1429,7 @@ namespace DxfExporter
                               "\nОпция выбора 'Оставить выбранные' оставляет свойство 'Выгрузить' только на выбранных строках.\n" +
                               "'Открыть деталь' - открывает все выбранные детали, если они не открыты."
             });
+            //№10
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1426,6 +1437,7 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает пользовательское расположение папки для DXF файлов."
             });
+            //№11
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1433,6 +1445,7 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по материалам."
             });
+            //№12
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1440,6 +1453,15 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по толщинам."
             });
+            //№13
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = scanAllIpart,
+                Title = "Детали с исполнениями",
+                Description = "Включает полное сканирование параметрической детали, детали с состояниями."
+            });
+            //№14
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1447,6 +1469,7 @@ namespace DxfExporter
                 Title = "Проверка развёртки",
                 Description = "Включает проверку развёртки при выгрузке.\nДанные по листам берутся из 'Таблицы соответствия'."
             });
+            //№15
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1454,6 +1477,7 @@ namespace DxfExporter
                 Title = "Шаблон имени",
                 Description = "Выберите шаблон имени файла DXF или настройте собственный."
             });
+            //№16
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1461,6 +1485,7 @@ namespace DxfExporter
                 Title = "Состав шаблона",
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
+            //№17
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1469,7 +1494,7 @@ namespace DxfExporter
                 Description = "Восстанавливает базовые настройки программы."
             });
 
-            
+
             // _tourSteps.Add(new TourStep { Tab = HomeTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
             // _tourSteps.Add(new TourStep { Tab = SettingsTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
         }
@@ -2310,8 +2335,7 @@ namespace DxfExporter
         }
 
         #endregion
-
-
+        
         #region Обработка окна из другого потока
 
         /// <summary>
@@ -2474,8 +2498,183 @@ namespace DxfExporter
         }
 
         #endregion
+        
+        #region Обработка окна
 
+        /// <summary>
+        /// Выделяет детали с ошибками в окне
+        /// </summary>
+        /// <param name="scannedData">Данные сканирования</param>
+        private static void SelectDetails(IEnumerable<StructureClass>? scannedData)
+        {
+            if (scannedData == null) return;
 
+            foreach (StructureClass structureClass in scannedData)
+            {
+                if (structureClass.IsExpanderGroup && structureClass.ChildMembers?.Count > 0)
+                {
+                    SelectDetails(structureClass.ChildMembers);
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(structureClass.Path))
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightCoral;
+                    continue;
+                }
+
+                //если ячейка статус не пустая, то добавить перенос строки
+                if (!string.IsNullOrWhiteSpace(structureClass.Status))
+                {
+                    structureClass.Status += "\n";
+                }
+
+                if (structureClass.NoFlat)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.NoFlat;
+                }
+                else if (structureClass.NullFlat)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.NullFlat;
+                }
+                else if (structureClass.ErrorMatThick)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.ErrorMatThick;
+                }
+                else if (structureClass.FakeThickness)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.FakeThickness;
+                }
+                else if (structureClass.BigFlat)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    structureClass.Status += ErrorsConst.BigFlat;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Процесс поиска в таблице
+        /// </summary>
+        private void SearchProc()
+        {
+            if (_scanResult?.ScannedData == null) { return; }
+
+            string searchText = searchBox.Text.Trim().ToLower() ?? "";
+
+            if (string.IsNullOrWhiteSpace(searchText))
+            {
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
+                return;
+            }
+
+            // Фильтруем в зависимости от выбранного столбца
+            List<StructureClass> filtered = _scanResult.ScannedData.ToList();
+
+            switch ((string)searchComboBox.SelectedValue)
+            {
+                case HeaderConst.Обозначение:
+                    filtered = _scanResult.ScannedData
+                        .Where(x => !string.IsNullOrEmpty(x.PartNumber) &&
+                                    x.PartNumber.ToLower().Contains(searchText)).ToList();
+                    break;
+                case HeaderConst.Наименование:
+                    filtered = _scanResult.ScannedData
+                        .Where(x => !string.IsNullOrEmpty(x.Description) &&
+                                    x.Description.ToLower().Contains(searchText)).ToList();
+                    break;
+                case HeaderConst.Материал:
+                    filtered = _scanResult.ScannedData
+                        .Where(x => !string.IsNullOrEmpty(x.Material) &&
+                                    x.Material.ToLower().Contains(searchText)).ToList();
+                    break;
+                case HeaderConst.Толщина:
+                    filtered = _scanResult.ScannedData
+                        .Where(x => x.Thickness.HasValue &&
+                                    x.Thickness.Value.ToString().ToLower().Contains(searchText)).ToList();
+                    break;
+                case HeaderConst.Количество:
+                    filtered = _scanResult.ScannedData
+                        .Where(x => x.Quantity.HasValue &&
+                                    x.Quantity.Value.ToString().ToLower().Contains(searchText)).ToList();
+                    break;
+            }
+
+            _displayScanData = BuildDisplayScanData(new ObservableCollection<StructureClass>(filtered));
+            scanData.ItemsSource = _displayScanData;
+        }
+        
+        /// <summary>
+        /// Формирует коллекцию для отображения в DataGrid.
+        /// Для параметрических и state-деталей создаёт строку-группу с вложенными исполнениями.
+        /// </summary>
+        private ObservableCollection<StructureClass> BuildDisplayScanData(ObservableCollection<StructureClass> source)
+        {
+            var display = new ObservableCollection<StructureClass>();
+
+            foreach (var detail in source)
+            {
+                bool hasChildMembers = detail.ChildMembers != null && detail.ChildMembers.Count > 0;
+
+                if (!hasChildMembers)
+                {
+                    display.Add(detail);
+                    continue;
+                }
+
+                var groupHeader = detail.Clone();
+                groupHeader.IsExpanderGroup = true;
+                groupHeader.IsExpanded = true;
+                //groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
+                groupHeader.DisplayName = detail.DisplayName;
+
+                // У строки-заголовка оставляем только имя файла, остальные колонки должны быть пустыми.
+                groupHeader.PartNumber = groupHeader.DisplayName;
+                groupHeader.Description = string.Empty;
+                groupHeader.Material = string.Empty;
+                groupHeader.Thickness = null;
+                groupHeader.Quantity = null;
+                groupHeader.UnloadProp = string.Empty;
+                groupHeader.Status = string.Empty;
+                groupHeader.Path = string.Empty;
+
+                display.Add(groupHeader);
+            }
+
+            return display;
+        }
+
+        /// <summary>
+        /// Возвращает плоский список строк для внутренней логики (экспорт, поиск, статусы).
+        /// </summary>
+        private ObservableCollection<StructureClass> FlattenForProcessing(IEnumerable<StructureClass>? source)
+        {
+            var result = new ObservableCollection<StructureClass>();
+            if (source == null) return result;
+
+            foreach (var row in source)
+            {
+                if (row.IsExpanderGroup)
+                {
+                    foreach (var member in row.ChildMembers) //.GroupMembers)
+                    {
+                        result.Add(member);
+                    }
+                }
+                else
+                {
+                    result.Add(row);
+                }
+            }
+
+            return result;
+        }
+        
         /// <summary>
         /// Подписывает базовую таблицу на изменение ширины колонок.
         /// Это нужно, чтобы вложенные таблицы в раскрытии повторяли текущую ширину столбцов.
@@ -2592,183 +2791,6 @@ namespace DxfExporter
             return null;
         }
 
-        #region Обработка окна
-
-        /// <summary>
-        /// Выделяет детали с ошибками в окне
-        /// </summary>
-        /// <param name="scannedData">Данные сканирования</param>
-        private static void SelectDetails(IEnumerable<StructureClass>? scannedData)
-        {
-            if (scannedData == null) return;
-
-            foreach (StructureClass structureClass in scannedData)
-            {
-                if (structureClass.IsExpanderGroup && structureClass.ChildMembers?.Count > 0)
-                {
-                    SelectDetails(structureClass.ChildMembers);
-                    continue;
-                }
-
-                if (string.IsNullOrEmpty(structureClass.Path))
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.OrangeRed;
-                    continue;
-                }
-
-                //если ячейка статус не пустая, то добавить перенос строки
-                if (!string.IsNullOrWhiteSpace(structureClass.Status))
-                {
-                    structureClass.Status += "\n";
-                }
-
-                if (structureClass.NoFlat)
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.NoFlat;
-                }
-                else if (structureClass.NullFlat)
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.NullFlat;
-                }
-                else if (structureClass.ErrorMatThick)
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.ErrorMatThick;
-                }
-                else if (structureClass.FakeThickness)
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.FakeThickness;
-                }
-                else if (structureClass.BigFlat)
-                {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.BigFlat;
-                }
-            }
-        }
-        
-        /// <summary>
-        /// Процесс поиска в таблице
-        /// </summary>
-        private void SearchProc()
-        {
-            if (_scanResult?.ScannedData == null) { return; }
-
-            string searchText = searchBox.Text.Trim().ToLower() ?? "";
-
-            if (string.IsNullOrWhiteSpace(searchText))
-            {
-                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
-                scanData.ItemsSource = _displayScanData;
-                return;
-            }
-
-            // Фильтруем в зависимости от выбранного столбца
-            List<StructureClass> filtered = _scanResult.ScannedData.ToList();
-
-            switch ((string)searchComboBox.SelectedValue)
-            {
-                case HeaderConst.Обозначение:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.PartNumber) &&
-                                    x.PartNumber.ToLower().Contains(searchText)).ToList();
-                    break;
-                case HeaderConst.Наименование:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Description) &&
-                                    x.Description.ToLower().Contains(searchText)).ToList();
-                    break;
-                case HeaderConst.Материал:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Material) &&
-                                    x.Material.ToLower().Contains(searchText)).ToList();
-                    break;
-                case HeaderConst.Толщина:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => x.Thickness.HasValue &&
-                                    x.Thickness.Value.ToString().ToLower().Contains(searchText)).ToList();
-                    break;
-                case HeaderConst.Количество:
-                    filtered = _scanResult.ScannedData
-                        .Where(x => x.Quantity.HasValue &&
-                                    x.Quantity.Value.ToString().ToLower().Contains(searchText)).ToList();
-                    break;
-            }
-
-            _displayScanData = BuildDisplayScanData(new ObservableCollection<StructureClass>(filtered));
-            scanData.ItemsSource = _displayScanData;
-        }
-        
-
-
-        /// <summary>
-        /// Формирует коллекцию для отображения в DataGrid.
-        /// Для параметрических и state-деталей создаёт строку-группу с вложенными исполнениями.
-        /// </summary>
-        private ObservableCollection<StructureClass> BuildDisplayScanData(ObservableCollection<StructureClass> source)
-        {
-            var display = new ObservableCollection<StructureClass>();
-
-            foreach (var detail in source)
-            {
-                bool hasChildMembers = detail.ChildMembers != null && detail.ChildMembers.Count > 0;
-
-                if (!hasChildMembers)
-                {
-                    display.Add(detail);
-                    continue;
-                }
-
-                var groupHeader = detail.Clone();
-                groupHeader.IsExpanderGroup = true;
-                groupHeader.IsExpanded = true;
-                //groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
-                groupHeader.DisplayName = detail.DisplayName;
-
-                // У строки-заголовка оставляем только имя файла, остальные колонки должны быть пустыми.
-                groupHeader.PartNumber = groupHeader.DisplayName;
-                groupHeader.Description = string.Empty;
-                groupHeader.Material = string.Empty;
-                groupHeader.Thickness = null;
-                groupHeader.Quantity = null;
-                groupHeader.UnloadProp = string.Empty;
-                groupHeader.Status = string.Empty;
-                groupHeader.Path = string.Empty;
-
-                display.Add(groupHeader);
-            }
-
-            return display;
-        }
-
-        /// <summary>
-        /// Возвращает плоский список строк для внутренней логики (экспорт, поиск, статусы).
-        /// </summary>
-        private ObservableCollection<StructureClass> FlattenForProcessing(IEnumerable<StructureClass>? source)
-        {
-            var result = new ObservableCollection<StructureClass>();
-            if (source == null) return result;
-
-            foreach (var row in source)
-            {
-                if (row.IsExpanderGroup)
-                {
-                    foreach (var member in row.ChildMembers) //.GroupMembers)
-                    {
-                        result.Add(member);
-                    }
-                }
-                else
-                {
-                    result.Add(row);
-                }
-            }
-
-            return result;
-        }
         /// <summary>
         /// Получение версии приложения
         /// </summary>
@@ -2953,7 +2975,10 @@ namespace DxfExporter
                         StartTour(1);
                         break;
                     case "1.0.1.2":
-                        StartTour(16);
+                        StartTour(17);
+                        break;
+                    case "1.0.2.0":
+                        StartTour(13);
                         break;
                 }
             }

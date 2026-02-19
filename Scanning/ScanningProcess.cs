@@ -621,7 +621,7 @@ namespace DxfExporter.Scanning
                 NeedUnload = false,
                 //UnloadProp = String.Empty, - по умолчанию
                 //Status = String.Empty, - по умолчанию
-                //NeedGrav = true, - по умолчанию
+                NeedGrav = false,
                 //NeedBendLine = false, - по умолчанию
                 //UnloadInTemplate = false, - по умолчанию
                 IsIPart = true,

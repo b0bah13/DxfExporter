@@ -488,18 +488,19 @@
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.58*" IsReadOnly="True"/>
+                                                
                                                 <DataGridTemplateColumn Header="{x:Static const:HeaderConst.Количество}" Width="0.5*">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <TextBox Text="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}"
                                                                      dxfExporter:NumericTextBoxBehavior.InputMode="Integer"
-                                                                     HorizontalContentAlignment="Center"
                                                                      BorderThickness="0"
                                                                      Background="Transparent"
                                                                      Padding="0"/>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
+
                                                 <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
