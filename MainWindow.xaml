@@ -212,6 +212,14 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <Setter Property="RowStyle">
+                <Setter.Value>
+                    <Style TargetType="{x:Type DataGridRow}">
+                        <Setter Property="Background" Value="{Binding RowColor}"/>
+                        <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
+                    </Style>
+                </Setter.Value>
+            </Setter>
         </Style>
 
     </Window.Resources>
@@ -444,6 +452,7 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
                                     <Setter Property="Background" Value="{Binding RowColor}" />
+                                    <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
                                     <Setter Property="DetailsVisibility" Value="Collapsed"/>
                                     <Style.Triggers>
                                         <MultiDataTrigger>
@@ -463,7 +472,8 @@
                                     <Grid Margin="0,0,0,0"
                                           Width="{Binding ElementName=scanData, Path=ActualWidth}">
                                         <DataGrid ItemsSource="{Binding ChildMembers}"
-                                                  Style="{StaticResource NestedScanDataGridStyle}">
+                                                  Style="{StaticResource NestedScanDataGridStyle}"
+                                                  ContextMenuOpening="scanData_ContextMenuOpening">
                                             <DataGrid.Columns>
                                                 <DataGridCheckBoxColumn Header="Выгрузить" Binding="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}" Width="0.66*" />
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>

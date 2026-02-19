@@ -917,7 +917,7 @@ namespace DxfExporter
         private void MenuItem_ChangeMaterial_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выбранные строки
-            var selected = GetSelectedRowsForActions();
+            var selected = GetSelectedRowsForActions(sender);
             if (!selected.Any()) return;
 
             ChangeMaterial(selected);
@@ -931,7 +931,7 @@ namespace DxfExporter
         private void MenuItem_AddMaterial_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выбранные строки
-            var selected = GetSelectedRowsForActions();
+            var selected = GetSelectedRowsForActions(sender);
             if (!selected.Any()) return;
 
             AddMaterial(selected);
@@ -948,7 +948,7 @@ namespace DxfExporter
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
 
-            var selectedRows = GetSelectedRowsForActions();
+            var selectedRows = GetSelectedRowsForActions(sender);
             if (!selectedRows.Any()) return;
 
             foreach (var row in selectedRows)
@@ -990,7 +990,7 @@ namespace DxfExporter
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
 
-            var selectedRows = GetSelectedRowsForActions();
+            var selectedRows = GetSelectedRowsForActions(sender);
             if (!selectedRows.Any()) return;
 
             foreach (var row in selectedRows)
@@ -1025,15 +1025,21 @@ namespace DxfExporter
         /// </summary>
         private void scanData_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            if (scanData.SelectedItems.Count == 0)
+            if (sender is not DataGrid currentGrid)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (currentGrid.SelectedItems.Count == 0)
             {
                 e.Handled = true;           // ← это ключевое — отменяет открытие меню
                 return;
             }
 
             // Дополнительная проверка — меню только при клике по строке
-            var pos = Mouse.GetPosition(scanData);
-            var hit = VisualTreeHelper.HitTest(scanData, pos);
+            var pos = Mouse.GetPosition(currentGrid);
+            var hit = VisualTreeHelper.HitTest(currentGrid, pos);
 
             if (hit?.VisualHit == null || !IsVisualChildOfDataGridRow(hit.VisualHit))
             {
@@ -1057,15 +1063,68 @@ namespace DxfExporter
         }
 
         /// <summary>
+        /// Для обычного клика по строке очищает выделение в остальных таблицах.
+        /// Это синхронизирует поведение основной и вложенных таблиц как у единого выбора.
+        /// </summary>
+        private void DataGridRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                return;
+            }
+
+            if (sender is not DataGridRow row)
+            {
+                return;
+            }
+
+            var ownerGrid = ItemsControl.ItemsControlFromItemContainer(row) as DataGrid;
+            if (ownerGrid == null)
+            {
+                return;
+            }
+
+            ClearSelectionInOtherGrids(ownerGrid);
+        }
+
+        private void ClearSelectionInOtherGrids(DataGrid activeGrid)
+        {
+            if (!ReferenceEquals(scanData, activeGrid) && scanData.SelectedItems.Count > 0)
+            {
+                scanData.SelectedItems.Clear();
+            }
+
+            foreach (var nestedGrid in _openedDetailsGrids.ToList())
+            {
+                if (nestedGrid == null || !nestedGrid.IsLoaded)
+                {
+                    _openedDetailsGrids.Remove(nestedGrid);
+                    continue;
+                }
+
+                if (ReferenceEquals(nestedGrid, activeGrid))
+                {
+                    continue;
+                }
+
+                if (nestedGrid.SelectedItems.Count > 0)
+                {
+                    nestedGrid.SelectedItems.Clear();
+                }
+            }
+        }
+
+        /// <summary>
         /// Срабатывает каждый раз при открытии контекстного меню
         /// Здесь мы синхронизируем состояние чекбоксов с первой выбранной строкой
         /// </summary>
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)
         {
             if (sender is not ContextMenu menu) return;
-            if (scanData.SelectedItems.Count == 0) return;
+            if (menu.PlacementTarget is not DataGrid currentGrid) return;
+            if (currentGrid.SelectedItems.Count == 0) return;
 
-            var first = scanData.SelectedItems[0] as StructureClass;
+            var first = currentGrid.SelectedItems[0] as StructureClass;
             if (first == null) return;
 
             foreach (MenuItem item in menu.Items.OfType<MenuItem>())
@@ -1106,7 +1165,7 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void MenuItem_InvertCheck_Click(object sender, RoutedEventArgs e)
         {
-            var selected = GetSelectedRowsForActions();
+            var selected = GetSelectedRowsForActions(sender);
             if (selected.Count == 0) return;
 
             var all = FlattenForProcessing(_displayScanData).ToList();
@@ -1137,7 +1196,7 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void MenuItem_OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            var paths = GetSelectedRowsForActions()
+            var paths = GetSelectedRowsForActions(sender)
                 .Select(x => x.Path)
                 .Where(x => !string.IsNullOrWhiteSpace(x))
                 .Distinct()
@@ -1153,13 +1212,56 @@ namespace DxfExporter
         /// Возвращает выбранные строки для действий контекстного меню.
         /// Если выбрана строка-группа expander, в выборку включаются её дочерние исполнения.
         /// </summary>
-        private List<StructureClass> GetSelectedRowsForActions()
+        private List<StructureClass> GetSelectedRowsForActions(object sender)
         {
-            return scanData.SelectedItems
+            var grid = ResolveContextDataGrid(sender);
+            if (grid == null) return new List<StructureClass>();
+
+            return grid.SelectedItems
                 .OfType<StructureClass>()
                 .SelectMany(row => row.IsExpanderGroup ? row.ChildMembers : (IEnumerable<StructureClass>)new List<StructureClass> { row })
                 .Distinct()
                 .ToList();
+        }
+
+        private static DataGrid? ResolveContextDataGrid(object sender)
+        {
+            if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is DataGrid targetGrid)
+            {
+                return targetGrid;
+            }
+
+            if (sender is DependencyObject dependencyObject)
+            {
+                var contextMenuFromParent = FindParentContextMenu(dependencyObject);
+                if (contextMenuFromParent?.PlacementTarget is DataGrid menuGrid)
+                {
+                    return menuGrid;
+                }
+            }
+
+            return null;
+        }
+
+        private static ContextMenu? FindParentContextMenu(DependencyObject? start)
+        {
+            DependencyObject? current = start;
+            while (current != null)
+            {
+                if (current is ContextMenu contextMenu)
+                {
+                    return contextMenu;
+                }
+
+                current = current switch
+                {
+                    FrameworkElement frameworkElement => frameworkElement.Parent,
+                    FrameworkContentElement frameworkContentElement => frameworkContentElement.Parent,
+                    _ => null
+                };
+            }
+
+            return null;
         }
 
 
@@ -2476,6 +2578,12 @@ namespace DxfExporter
                     SelectDetails(structureClass.ChildMembers);
                     continue;
                 }
+
+                if (!string.IsNullOrWhiteSpace(structureClass.Status))
+                {
+                    SelectDetails(structureClass.ChildMembers);
+                    continue;
+                }
                 
                 if (string.IsNullOrEmpty(structureClass.Path))
                 {
@@ -2591,7 +2699,7 @@ namespace DxfExporter
 
                 var groupHeader = detail.Clone();
                 groupHeader.IsExpanderGroup = true;
-                groupHeader.IsExpanded = false;
+                groupHeader.IsExpanded = true;
                 //groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
                 groupHeader.DisplayName = detail.DisplayName;
 
