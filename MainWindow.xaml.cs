@@ -49,11 +49,15 @@ namespace DxfExporter
 
         private CancellationTokenSource _cts;
         private ScanResult _scanResult;
+        private ObservableCollection<StructureClass> _displayScanData = new();
         private readonly List<TourStep> _tourSteps = new();
         private int _tourIndex;
         private bool _isTourActive;
         private bool _isApplyingSettings;
         private bool _isSettingsInitialized;
+        private bool _isColumnWidthSyncSubscribed;
+        private bool _isContextMenuSyncing;
+        private readonly HashSet<DataGrid> _openedDetailsGrids = new();
 
         private static readonly JsonSerializerOptions SettingsJsonOptions = new JsonSerializerOptions
         {
@@ -96,6 +100,7 @@ namespace DxfExporter
         { 
             public bool CheckGab { get; set; } = true;
             public string PathTable { get; set; } = defaultPathTable;
+            public bool ScanAllIpart { get; set; } = false;
         }
 
         /// <summary>
@@ -103,10 +108,12 @@ namespace DxfExporter
         /// </summary>
         private sealed class SettingsTabState
         {
+            //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
             public bool UserDxfDir { get; set; }
             public bool CategorizeMaterial { get; set; } = true;
             public bool CategorizeThickness { get; set; } = true;
             public bool CheckGab { get; set; } = true;
+            public bool ScanAllIpart { get; set; } = false;
             public string? TablePath { get; set; }
             public string? TemplateMode { get; set; }
             public string? CustomText { get; set; }
@@ -157,6 +164,7 @@ namespace DxfExporter
         public MainWindow()
         {
             InitializeComponent();
+            SubscribeMainGridColumnWidthSync();
 
             //DataContext = this;
             DataContext = MaskVm;
@@ -453,11 +461,11 @@ namespace DxfExporter
         }
 
         /// <summary>
-        /// Обработка чекбоксов выгрузки подпапок
+        /// Обработка чекбоксов
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void categorizeFolder_Checked(object sender, RoutedEventArgs e)
+        private void processCheckBox_Checked(object sender, RoutedEventArgs e)
         {
             var checkBox = sender as CheckBox;
 
@@ -471,6 +479,12 @@ namespace DxfExporter
                     break;
                 case "userDirect":
                     FolderSettings.UserDxfDir = userDirect.IsChecked == true;
+                    break;
+                case "checkGab":
+                    CheckSettings.CheckGab = checkGab.IsChecked == true;
+                    break;
+                case "scanAllIpart":
+                    CheckSettings.ScanAllIpart = scanAllIpart.IsChecked == true;
                     break;
             }
 
@@ -531,27 +545,7 @@ namespace DxfExporter
                     break;
             }
         }
-
-        /// <summary>
-        /// Обработка чекбокса проверки габарита
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void checkGab_Checked(object sender, RoutedEventArgs e)
-        {
-            var checkBox = sender as CheckBox;
-
-            switch (checkBox.Name)
-            {
-                case "checkGab":
-                    CheckSettings.CheckGab = checkGab.IsChecked == true;
-                    break;
-            }
-
-            UpdateTooltip();
-            SaveSettingsTabState();
-        }
-
+        
         /// <summary>
         /// Открывает папку
         /// </summary>
@@ -667,8 +661,10 @@ namespace DxfExporter
             categorizeMaterial.IsChecked = true;
             categorizeThickness.IsChecked = true;
             checkGab.IsChecked = true;
+            scanAllIpart.IsChecked = false;
             TablePath.Text = defaultPathTable;
             templateComboBox.SelectedIndex = 0;
+            //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
         }
 
         #region Обработка выборка маски выгрузки
@@ -913,9 +909,7 @@ namespace DxfExporter
         private void MenuItem_ChangeMaterial_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выбранные строки
-            var selected = scanData.SelectedItems
-                .OfType<StructureClass>()
-                .ToList();
+            var selected = GetSelectedRowsForActions(sender);
             if (!selected.Any()) return;
 
             ChangeMaterial(selected);
@@ -929,9 +923,7 @@ namespace DxfExporter
         private void MenuItem_AddMaterial_Click(object sender, RoutedEventArgs e)
         {
             // Получаем выбранные строки
-            var selected = scanData.SelectedItems
-                .OfType<StructureClass>()
-                .ToList();
+            var selected = GetSelectedRowsForActions(sender);
             if (!selected.Any()) return;
 
             AddMaterial(selected);
@@ -944,11 +936,12 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void Menu_Checked_General(object sender, RoutedEventArgs e)
         {
+            if (_isContextMenuSyncing) return;
             if (sender is not MenuItem menuItem) return;
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
 
-            var selectedRows = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            var selectedRows = GetSelectedRowsForActions(sender);
             if (!selectedRows.Any()) return;
 
             foreach (var row in selectedRows)
@@ -986,11 +979,12 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void Menu_Unchecked_General(object sender, RoutedEventArgs e)
         {
+            if (_isContextMenuSyncing) return;
             if (sender is not MenuItem menuItem) return;
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
 
-            var selectedRows = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            var selectedRows = GetSelectedRowsForActions(sender);
             if (!selectedRows.Any()) return;
 
             foreach (var row in selectedRows)
@@ -1025,15 +1019,21 @@ namespace DxfExporter
         /// </summary>
         private void scanData_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            if (scanData.SelectedItems.Count == 0)
+            if (sender is not DataGrid currentGrid)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            if (currentGrid.SelectedItems.Count == 0)
             {
                 e.Handled = true;           // ← это ключевое — отменяет открытие меню
                 return;
             }
 
             // Дополнительная проверка — меню только при клике по строке
-            var pos = Mouse.GetPosition(scanData);
-            var hit = VisualTreeHelper.HitTest(scanData, pos);
+            var pos = Mouse.GetPosition(currentGrid);
+            var hit = VisualTreeHelper.HitTest(currentGrid, pos);
 
             if (hit?.VisualHit == null || !IsVisualChildOfDataGridRow(hit.VisualHit))
             {
@@ -1057,45 +1057,136 @@ namespace DxfExporter
         }
 
         /// <summary>
+        /// Для обычного клика по строке очищает выделение в остальных таблицах.
+        /// Это синхронизирует поведение основной и вложенных таблиц как у единого выбора.
+        /// </summary>
+        private void DataGridRow_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) || Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                return;
+            }
+
+            if (sender is not DataGridRow row)
+            {
+                return;
+            }
+
+            var ownerGrid = ItemsControl.ItemsControlFromItemContainer(row) as DataGrid;
+            if (ownerGrid == null)
+            {
+                return;
+            }
+
+            ClearSelectionInOtherGrids(ownerGrid);
+        }
+
+        private void ClearSelectionInOtherGrids(DataGrid activeGrid)
+        {
+            if (!ReferenceEquals(scanData, activeGrid) && scanData.SelectedItems.Count > 0)
+            {
+                scanData.SelectedItems.Clear();
+            }
+
+            foreach (var nestedGrid in _openedDetailsGrids.ToList())
+            {
+                if (nestedGrid == null || !nestedGrid.IsLoaded)
+                {
+                    _openedDetailsGrids.Remove(nestedGrid);
+                    continue;
+                }
+
+                if (ReferenceEquals(nestedGrid, activeGrid))
+                {
+                    continue;
+                }
+
+                if (nestedGrid.SelectedItems.Count > 0)
+                {
+                    nestedGrid.SelectedItems.Clear();
+                }
+            }
+        }
+
+        private static StructureClass? GetContextMenuStateSource(StructureClass selectedRow)
+        {
+            if (selectedRow.IsExpanderGroup)
+            {
+                return selectedRow.ChildMembers?.FirstOrDefault();
+            }
+
+            return selectedRow;
+        }
+
+        /// <summary>
         /// Срабатывает каждый раз при открытии контекстного меню
         /// Здесь мы синхронизируем состояние чекбоксов с первой выбранной строкой
         /// </summary>
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)
         {
             if (sender is not ContextMenu menu) return;
-            if (scanData.SelectedItems.Count == 0) return;
+            if (menu.PlacementTarget is not DataGrid currentGrid) return;
+            if (currentGrid.SelectedItems.Count == 0) return;
 
-            var first = scanData.SelectedItems[0] as StructureClass;
-            if (first == null) return;
+            var firstSelected = currentGrid.SelectedItems[0] as StructureClass;
+            if (firstSelected == null) return;
 
-            foreach (MenuItem item in menu.Items.OfType<MenuItem>())
+            var stateSource = GetContextMenuStateSource(firstSelected);
+            if (stateSource == null) return;
+
+            _isContextMenuSyncing = true;
+            try
             {
-                if (item.Tag == null) continue;
+                bool hideMaterialActions = firstSelected.IsExpanderGroup;
 
-                string tag = item.Tag.ToString();
-
-                switch (tag)
+                foreach (object menuObject in menu.Items)
                 {
-                    case "NeedUnload":
-                        item.IsChecked = first.NeedUnload;
-                        break;
-                    case "NeedGrav":
-                        item.IsChecked = first.NeedGrav;
-                        break;
-                    case "NeedBendLine":
-                        item.IsChecked = first.NeedBendLine;
-                        break;
-                    case "UnloadInTemplate":
-                        item.IsChecked = first.UnloadInTemplate;
-                        break;
-                    case "UnloadAllVers":
+                    if (menuObject is MenuItem item)
                     {
-                        bool can = first.IsIPart || first.IsModelStatePart;
-                        item.IsEnabled = can;
-                        item.IsChecked = can && first.UnloadAllVers;
-                        break;
+                        if (item.Header is string header &&
+                            (header == "Изменить материал" || header == "Добавить материал"))
+                        {
+                            item.Visibility = hideMaterialActions ? Visibility.Collapsed : Visibility.Visible;
+                            continue;
+                        }
+
+                        if (item.Tag == null) continue;
+
+                        string tag = item.Tag.ToString();
+
+                        switch (tag)
+                        {
+                            case "NeedUnload":
+                                item.IsChecked = stateSource.NeedUnload;
+                                break;
+                            case "NeedGrav":
+                                item.IsChecked = stateSource.NeedGrav;
+                                break;
+                            case "NeedBendLine":
+                                item.IsChecked = stateSource.NeedBendLine;
+                                break;
+                            case "UnloadInTemplate":
+                                item.IsChecked = stateSource.UnloadInTemplate;
+                                break;
+                            case "UnloadAllVers":
+                            {
+                                bool can = stateSource.IsIPart || stateSource.IsModelStatePart;
+                                item.IsEnabled = can;
+                                item.IsChecked = can && stateSource.UnloadAllVers;
+                                break;
+                            }
+                        }
+                    }
+                    else if (menuObject is Separator separator)
+                    {
+                        separator.Visibility = hideMaterialActions ? Visibility.Collapsed : Visibility.Visible;
+                        hideMaterialActions = false;
                     }
                 }
+            }
+            finally
+            {
+                _isContextMenuSyncing = false;
             }
         }
 
@@ -1106,10 +1197,10 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void MenuItem_InvertCheck_Click(object sender, RoutedEventArgs e)
         {
-            var selected = scanData.SelectedItems.OfType<StructureClass>().ToList();
+            var selected = GetSelectedRowsForActions(sender);
             if (selected.Count == 0) return;
 
-            var all = scanData.Items.OfType<StructureClass>().ToList();
+            var all = FlattenForProcessing(_displayScanData).ToList();
 
             // Сбрасываем у всех
             foreach (var row in all)
@@ -1137,13 +1228,74 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void MenuItem_OpenFile_Click(object sender, RoutedEventArgs e)
         {
-            var paths = scanData.SelectedItems.OfType<StructureClass>()
-                .Select(x => x.Path).ToList();
+            var paths = GetSelectedRowsForActions(sender)
+                .Select(x => x.Path)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
 
             if (paths.Count == 0) return;
 
             OpenDocumentsForUser(paths);
         }
+
+
+        /// <summary>
+        /// Возвращает выбранные строки для действий контекстного меню.
+        /// Если выбрана строка-группа expander, в выборку включаются её дочерние исполнения.
+        /// </summary>
+        private List<StructureClass> GetSelectedRowsForActions(object sender)
+        {
+            var grid = ResolveContextDataGrid(sender);
+            if (grid == null) return new List<StructureClass>();
+
+            return grid.SelectedItems
+                .OfType<StructureClass>()
+                .SelectMany(row => row.IsExpanderGroup ? row.ChildMembers : (IEnumerable<StructureClass>)new List<StructureClass> { row })
+                .Distinct()
+                .ToList();
+        }
+
+        private static DataGrid? ResolveContextDataGrid(object sender)
+        {
+            if (sender is ContextMenu contextMenu && contextMenu.PlacementTarget is DataGrid targetGrid)
+            {
+                return targetGrid;
+            }
+
+            if (sender is DependencyObject dependencyObject)
+            {
+                var contextMenuFromParent = FindParentContextMenu(dependencyObject);
+                if (contextMenuFromParent?.PlacementTarget is DataGrid menuGrid)
+                {
+                    return menuGrid;
+                }
+            }
+
+            return null;
+        }
+
+        private static ContextMenu? FindParentContextMenu(DependencyObject? start)
+        {
+            DependencyObject? current = start;
+            while (current != null)
+            {
+                if (current is ContextMenu contextMenu)
+                {
+                    return contextMenu;
+                }
+
+                current = current switch
+                {
+                    FrameworkElement frameworkElement => frameworkElement.Parent,
+                    FrameworkContentElement frameworkContentElement => frameworkContentElement.Parent,
+                    _ => null
+                };
+            }
+
+            return null;
+        }
+
 
         #endregion
 
@@ -1187,6 +1339,7 @@ namespace DxfExporter
         {
             // Очищаем предыдущую последовательность шагов.
             _tourSteps.Clear();
+            //№0
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1194,6 +1347,7 @@ namespace DxfExporter
                 Title = "Сканирование",
                 Description = "Запускает сканирование выбранной сборки или детали."
             });
+            //№1
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1201,6 +1355,7 @@ namespace DxfExporter
                 Title = "Добавление файлов",
                 Description = "Добавляет в таблицу открытые листовые детали."
             });
+            //№2
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1208,6 +1363,7 @@ namespace DxfExporter
                 Title = "Добавление файлов",
                 Description = "Добавляет в таблицу листовые детали выбранные пользователем из папки."
             });
+            //№3
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1215,6 +1371,7 @@ namespace DxfExporter
                 Title = "Очистка",
                 Description = "Очищает таблицу."
             });
+            //№4
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1222,6 +1379,7 @@ namespace DxfExporter
                 Title = "Создание DXF",
                 Description = "Создаёт DXF для выбранных позиций в таблице."
             });
+            //№5
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1229,6 +1387,7 @@ namespace DxfExporter
                 Title = "Открыть папку",
                 Description = "Открывает папку с выгруженными развёртками."
             });
+            //№6
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1236,6 +1395,7 @@ namespace DxfExporter
                 Title = "Поиск",
                 Description = "Введите текст, чтобы отфильтровать таблицу по выбранному столбцу."
             });
+            //№7
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1243,6 +1403,7 @@ namespace DxfExporter
                 Title = "Столбец поиска",
                 Description = "Выберите, по какому столбцу искать совпадения."
             });
+            //№8
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1250,6 +1411,7 @@ namespace DxfExporter
                 Title = "Очистка",
                 Description = "Сбрасывает строку поиска и возвращает полный список."
             });
+            //№9
             _tourSteps.Add(new TourStep
             {
                 Tab = HomeTab,
@@ -1267,6 +1429,7 @@ namespace DxfExporter
                               "\nОпция выбора 'Оставить выбранные' оставляет свойство 'Выгрузить' только на выбранных строках.\n" +
                               "'Открыть деталь' - открывает все выбранные детали, если они не открыты."
             });
+            //№10
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1274,6 +1437,7 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает пользовательское расположение папки для DXF файлов."
             });
+            //№11
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1281,6 +1445,7 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по материалам."
             });
+            //№12
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1288,6 +1453,15 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по толщинам."
             });
+            //№13
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = scanAllIpart,
+                Title = "Детали с исполнениями",
+                Description = "Включает полное сканирование параметрической детали, детали с состояниями."
+            });
+            //№14
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1295,6 +1469,7 @@ namespace DxfExporter
                 Title = "Проверка развёртки",
                 Description = "Включает проверку развёртки при выгрузке.\nДанные по листам берутся из 'Таблицы соответствия'."
             });
+            //№15
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1302,6 +1477,7 @@ namespace DxfExporter
                 Title = "Шаблон имени",
                 Description = "Выберите шаблон имени файла DXF или настройте собственный."
             });
+            //№16
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1309,6 +1485,7 @@ namespace DxfExporter
                 Title = "Состав шаблона",
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
+            //№17
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1317,7 +1494,7 @@ namespace DxfExporter
                 Description = "Восстанавливает базовые настройки программы."
             });
 
-            
+
             // _tourSteps.Add(new TourStep { Tab = HomeTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
             // _tourSteps.Add(new TourStep { Tab = SettingsTab, Target = <имя_элемента>, Title = "<заголовок>", Description = "<описание>" });
         }
@@ -1540,15 +1717,16 @@ namespace DxfExporter
 
                 txtStatus.Text = $"Сканирование завершено";
                 
-                scanData.ItemsSource = _scanResult.ScannedData;
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
 
-                foreach (StructureClass structureClass in scanData.ItemsSource)
+                foreach (StructureClass structureClass in FlattenForProcessing(_displayScanData))
                 {
                     structureClass.UpdateUnloadProp();
                 }
 
                 // подсветить детали с ошибками
-                SelectDetails(scanData.ItemsSource as ObservableCollection<StructureClass>);
+                SelectDetails(FlattenForProcessing(_displayScanData));
 
             }
             catch (Exception ex)
@@ -1590,7 +1768,7 @@ namespace DxfExporter
                     return;
                 }
 
-                int unloadCount = (scanData.ItemsSource as ObservableCollection<StructureClass>).Count(structureClass => structureClass.NeedUnload);
+                int unloadCount = FlattenForProcessing(_displayScanData).Count(structureClass => structureClass.NeedUnload);
                 if (unloadCount == 0)
                 {
                     MessageBox.Show("Не выбрана ни одна деталь для выгрузки!", "Нет данных", MessageBoxButton.OK,
@@ -1604,7 +1782,7 @@ namespace DxfExporter
                 // Дать UI возможность обновить интерфейс
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>;
+                var procData = FlattenForProcessing(_displayScanData);
                 var maskData = MaskVm.MaskParts;
                 var modeName = MaskVm.ModeName;
 
@@ -1649,6 +1827,7 @@ namespace DxfExporter
                 case CallSource.Scan:
                     LogTextBox.Clear();
                     scanData.ItemsSource = null;
+                    _displayScanData.Clear();
 
                     OverlayText.Text = CommonConstants.OverlayScan;
                     txtStatus.Text = "Сканирование файла...";
@@ -1656,8 +1835,10 @@ namespace DxfExporter
                 case CallSource.Export:
                     //Сброс строки поиска, что бы взять данные из scanData
                     searchBox.Clear();
-
                     scanData.SelectedItems.Clear();
+
+                    // снять подсветку деталей
+                    RemoveColorDetails(FlattenForProcessing(scanData.ItemsSource as IEnumerable<StructureClass>));
 
                     OverlayText.Text = CommonConstants.OverlayDxf;
                     txtStatus.Text = "Выгрузка Dxf...";
@@ -1762,19 +1943,15 @@ namespace DxfExporter
                 var choiceResult = wpfWin.SelectedMaterials;
                 if (choiceResult == null || choiceResult.Count == 0) return;
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>;
-
                 // Чтобы не было проблем с изменением коллекции во время перебора — 
-                // работаем с копией списка индексов или оригинальных элементов
+                // работаем с копией оригинальных элементов
                 var selectedCopy = selected.ToList(); // фиксируем текущее состояние
 
                 foreach (string newMaterial in choiceResult)
                 {
                     // Проходим по оригинальным элементам в порядке их появления в коллекции
-                    for (int i = 0; i < procData.Count; i++)
+                    foreach (var original in selectedCopy)
                     {
-                        var original = procData[i];
-
                         // Проверяем, что это один из выбранных и материал отличается
                         if (!selectedCopy.Contains(original)) continue;
                         if (original.Material == newMaterial) continue;
@@ -1792,10 +1969,8 @@ namespace DxfExporter
                         copy.RowColor = System.Windows.Media.Brushes.Azure;
 
                         // Вставляем СРАЗУ ПОСЛЕ оригинала
-                        procData.Insert(i + 1, copy);
+                        InsertCopyAfterOriginal(original, copy);
 
-                        // Важно: после вставки все последующие индексы сдвигаются → увеличиваем i
-                        i++;
                     }
                 }
                 /*
@@ -1824,7 +1999,33 @@ namespace DxfExporter
                 Debug.WriteLine(e.StackTrace);
             }
         }
-        
+        private void InsertCopyAfterOriginal(StructureClass original, StructureClass copy)
+        {
+            if (_displayScanData == null || _displayScanData.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _displayScanData.Count; i++)
+            {
+                var row = _displayScanData[i];
+
+                if (ReferenceEquals(row, original))
+                {
+                    _displayScanData.Insert(i + 1, copy);
+                    return;
+                }
+
+                if (!row.IsExpanderGroup) continue;
+
+                int memberIndex = row.ChildMembers.IndexOf(original);
+                if (memberIndex < 0) continue;
+
+                row.ChildMembers.Insert(memberIndex + 1, copy);
+                return;
+            }
+        }
+
         /// <summary>
         /// Получение списка материалов из Inventor
         /// </summary>
@@ -1957,27 +2158,28 @@ namespace DxfExporter
                     return;
                 }
 
-                var procData = scanData.ItemsSource as ObservableCollection<StructureClass>
-                               ?? new ObservableCollection<StructureClass>();
+                _scanResult ??= new ScanResult();
 
-                //не добавляет уже существующие в таблице детали
+                // Не добавляем уже существующие в таблице детали (с учётом имени состояния/исполнения).
                 foreach (var result in addResult.ScannedData)
                 {
-                    if (!procData.Any(x => x.Path == result.Path))
+                    bool exists = _scanResult.ScannedData.Any(x => x.Path == result.Path && x.MemberName == result.MemberName);
+                    if (!exists)
                     {
-                        procData.Add(result);
+                        _scanResult.ScannedData.Add(result);
                     }
                 }
 
-                scanData.ItemsSource ??= procData;
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
 
-                foreach (StructureClass structureClass in scanData.ItemsSource)
+                foreach (StructureClass structureClass in FlattenForProcessing(_displayScanData))
                 {
                     structureClass.UpdateUnloadProp();
                 }
 
                 // подсветить детали с ошибками
-                SelectDetails(scanData.ItemsSource as ObservableCollection<StructureClass>);
+                SelectDetails(FlattenForProcessing(_displayScanData));
 
                 txtStatus.Text = "Готов к выгрузке dxf";
             }
@@ -2155,7 +2357,7 @@ namespace DxfExporter
         }
 
         #endregion
-
+        
         #region Обработка окна из другого потока
 
         /// <summary>
@@ -2318,17 +2520,31 @@ namespace DxfExporter
         }
 
         #endregion
-
+        
         #region Обработка окна
 
         /// <summary>
         /// Выделяет детали с ошибками в окне
         /// </summary>
         /// <param name="scannedData">Данные сканирования</param>
-        private static void SelectDetails(ObservableCollection<StructureClass>? scannedData)
+        private static void SelectDetails(IEnumerable<StructureClass>? scannedData)
         {
+            if (scannedData == null) return;
+
             foreach (StructureClass structureClass in scannedData)
             {
+                if (structureClass.IsExpanderGroup && structureClass.ChildMembers?.Count > 0)
+                {
+                    SelectDetails(structureClass.ChildMembers);
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(structureClass.Path))
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightSalmon;
+                    continue;
+                }
+
                 //если ячейка статус не пустая, то добавить перенос строки
                 if (!string.IsNullOrWhiteSpace(structureClass.Status))
                 {
@@ -2362,7 +2578,31 @@ namespace DxfExporter
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Снять подсветку деталей
+        /// </summary>
+        /// <param name="scannedData">Данные сканирования</param>
+        private static void RemoveColorDetails(IEnumerable<StructureClass>? scannedData)
+        {
+            if (scannedData == null) return;
+
+            foreach (StructureClass structureClass in scannedData)
+            {
+                if (structureClass.IsExpanderGroup && structureClass.ChildMembers?.Count > 0)
+                {
+                    SelectDetails(structureClass.ChildMembers);
+                    continue;
+                }
+
+                if (structureClass.RowColor == System.Windows.Media.Brushes.LightGreen || structureClass.RowColor == System.Windows.Media.Brushes
+                    .LightCoral)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.White;
+                }
+            }
+        }
+
         /// <summary>
         /// Процесс поиска в таблице
         /// </summary>
@@ -2374,7 +2614,8 @@ namespace DxfExporter
 
             if (string.IsNullOrWhiteSpace(searchText))
             {
-                scanData.ItemsSource = _scanResult.ScannedData;
+                _displayScanData = BuildDisplayScanData(_scanResult.ScannedData);
+                scanData.ItemsSource = _displayScanData;
                 return;
             }
 
@@ -2400,19 +2641,202 @@ namespace DxfExporter
                     break;
                 case HeaderConst.Толщина:
                     filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Thickness.ToString()) &&
-                                    x.Thickness.ToString().ToLower().Contains(searchText)).ToList();
+                        .Where(x => x.Thickness.HasValue &&
+                                    x.Thickness.Value.ToString().ToLower().Contains(searchText)).ToList();
                     break;
                 case HeaderConst.Количество:
                     filtered = _scanResult.ScannedData
-                        .Where(x => !string.IsNullOrEmpty(x.Quantity.ToString()) &&
-                                    x.Quantity.ToString().ToLower().Contains(searchText)).ToList();
+                        .Where(x => x.Quantity.HasValue &&
+                                    x.Quantity.Value.ToString().ToLower().Contains(searchText)).ToList();
                     break;
             }
 
-            scanData.ItemsSource = new ObservableCollection<StructureClass>(filtered);
+            _displayScanData = BuildDisplayScanData(new ObservableCollection<StructureClass>(filtered));
+            scanData.ItemsSource = _displayScanData;
         }
         
+        /// <summary>
+        /// Формирует коллекцию для отображения в DataGrid.
+        /// Для параметрических и state-деталей создаёт строку-группу с вложенными исполнениями.
+        /// </summary>
+        private ObservableCollection<StructureClass> BuildDisplayScanData(ObservableCollection<StructureClass> source)
+        {
+            var display = new ObservableCollection<StructureClass>();
+
+            foreach (var detail in source)
+            {
+                bool hasChildMembers = detail.ChildMembers != null && detail.ChildMembers.Count > 0;
+
+                if (!hasChildMembers)
+                {
+                    display.Add(detail);
+                    continue;
+                }
+
+                var groupHeader = detail.Clone();
+                groupHeader.IsExpanderGroup = true;
+                groupHeader.IsExpanded = true;
+                //groupHeader.GroupMembers = new ObservableCollection<StructureClass>(detail.ChildMembers);
+                groupHeader.DisplayName = detail.DisplayName;
+
+                // У строки-заголовка оставляем только имя файла, остальные колонки должны быть пустыми.
+                groupHeader.PartNumber = groupHeader.DisplayName;
+                groupHeader.Description = string.Empty;
+                groupHeader.Material = string.Empty;
+                groupHeader.Thickness = null;
+                groupHeader.Quantity = null;
+                groupHeader.UnloadProp = string.Empty;
+                groupHeader.Status = string.Empty;
+                groupHeader.Path = string.Empty;
+
+                display.Add(groupHeader);
+            }
+
+            return display;
+        }
+
+        /// <summary>
+        /// Возвращает плоский список строк для внутренней логики (экспорт, поиск, статусы).
+        /// </summary>
+        private ObservableCollection<StructureClass> FlattenForProcessing(IEnumerable<StructureClass>? source)
+        {
+            var result = new ObservableCollection<StructureClass>();
+            if (source == null) return result;
+
+            foreach (var row in source)
+            {
+                if (row.IsExpanderGroup)
+                {
+                    foreach (var member in row.ChildMembers) //.GroupMembers)
+                    {
+                        result.Add(member);
+                    }
+                }
+                else
+                {
+                    result.Add(row);
+                }
+            }
+
+            return result;
+        }
+        
+        /// <summary>
+        /// Подписывает базовую таблицу на изменение ширины колонок.
+        /// Это нужно, чтобы вложенные таблицы в раскрытии повторяли текущую ширину столбцов.
+        /// </summary>
+        private void SubscribeMainGridColumnWidthSync()
+        {
+            if (_isColumnWidthSyncSubscribed || scanData == null) return;
+
+            foreach (var column in scanData.Columns)
+            {
+                DependencyPropertyDescriptor
+                    .FromProperty(DataGridColumn.WidthProperty, typeof(DataGridColumn))
+                    ?.AddValueChanged(column, OnMainGridColumnWidthChanged);
+            }
+
+            _isColumnWidthSyncSubscribed = true;
+        }
+
+        /// <summary>
+        /// Обновляет ширины колонок во всех открытых вложенных таблицах.
+        /// </summary>
+        private void OnMainGridColumnWidthChanged(object? sender, EventArgs e)
+        {
+            SyncAllOpenedRowDetailsColumns();
+        }
+
+        /// <summary>
+        /// Событие загрузки деталей строки (RowDetails).
+        /// Регистрирует вложенную таблицу и сразу синхронизирует её ширину.
+        /// </summary>
+        private void scanData_LoadingRowDetails(object sender, DataGridRowDetailsEventArgs e)
+        {
+            if (e.DetailsElement is not FrameworkElement detailsRoot) return;
+
+            var nestedGrid = FindVisualChild<DataGrid>(detailsRoot);
+            if (nestedGrid == null) return;
+
+            _openedDetailsGrids.Add(nestedGrid);
+            ApplyBaseColumnsWidthToNested(nestedGrid);
+        }
+
+        /// <summary>
+        /// Событие выгрузки деталей строки (RowDetails).
+        /// Удаляет вложенную таблицу из списка синхронизации.
+        /// </summary>
+        private void scanData_UnloadingRowDetails(object sender, DataGridRowDetailsEventArgs e)
+        {
+            if (e.DetailsElement is not FrameworkElement detailsRoot) return;
+
+            var nestedGrid = FindVisualChild<DataGrid>(detailsRoot);
+            if (nestedGrid == null) return;
+
+            _openedDetailsGrids.Remove(nestedGrid);
+        }
+
+        /// <summary>
+        /// Синхронизирует ширины колонок во всех открытых вложенных таблицах.
+        /// </summary>
+        private void SyncAllOpenedRowDetailsColumns()
+        {
+            if (_openedDetailsGrids.Count == 0) return;
+
+            foreach (var nestedGrid in _openedDetailsGrids.ToList())
+            {
+                if (!nestedGrid.IsLoaded)
+                {
+                    _openedDetailsGrids.Remove(nestedGrid);
+                    continue;
+                }
+
+                ApplyBaseColumnsWidthToNested(nestedGrid);
+            }
+        }
+
+        /// <summary>
+        /// Копирует текущую ширину колонок основной таблицы во вложенную таблицу.
+        /// </summary>
+        private void ApplyBaseColumnsWidthToNested(DataGrid nestedGrid)
+        {
+            if (scanData?.Columns == null || nestedGrid?.Columns == null) return;
+
+            int count = Math.Min(scanData.Columns.Count, nestedGrid.Columns.Count);
+            for (int i = 0; i < count; i++)
+            {
+                double width = scanData.Columns[i].ActualWidth;
+                if (width > 0)
+                {
+                    nestedGrid.Columns[i].Width = new DataGridLength(width);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Поиск дочернего визуального элемента заданного типа.
+        /// </summary>
+        private static TChild? FindVisualChild<TChild>(DependencyObject parent) where TChild : DependencyObject
+        {
+            int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < childrenCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is TChild typedChild)
+                {
+                    return typedChild;
+                }
+
+                var nested = FindVisualChild<TChild>(child);
+                if (nested != null)
+                {
+                    return nested;
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Получение версии приложения
         /// </summary>
@@ -2459,8 +2883,16 @@ namespace DxfExporter
                     : "Габарит развёртки проверятся не будет"; //Выключено
             }
 
+            if (scanAllIpart != null)
+            {
+                scanAllIpart.ToolTip = scanAllIpart?.IsChecked == true
+                    ? "Сканирует все исполнения/состояния детали" //Включено: 
+                    : "Сканирует только активное исполнение/состояние детали"; //Выключено
+            }
+
+            //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
         }
-        
+
         /// <summary>
         /// Загружает состояние элементов вкладки настроек из внешнего JSON-файла, если он существует.
         /// </summary>
@@ -2482,6 +2914,8 @@ namespace DxfExporter
                 categorizeMaterial.IsChecked = state.CategorizeMaterial;
                 categorizeThickness.IsChecked = state.CategorizeThickness;
                 checkGab.IsChecked = state.CheckGab;
+                scanAllIpart.IsChecked = state.ScanAllIpart;
+                //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
 
                 string tablePath = string.IsNullOrWhiteSpace(state.TablePath) ? defaultPathTable : state.TablePath;
                 TablePath.Text = File.Exists(tablePath) ? tablePath : defaultPathTable;
@@ -2534,10 +2968,12 @@ namespace DxfExporter
             {
                 var state = new SettingsTabState
                 {
+                    //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
                     UserDxfDir = userDirect?.IsChecked == true,
                     CategorizeMaterial = categorizeMaterial?.IsChecked == true,
                     CategorizeThickness = categorizeThickness?.IsChecked == true,
                     CheckGab = checkGab?.IsChecked == true,
+                    ScanAllIpart =  scanAllIpart?.IsChecked == true,
                     TablePath = TablePath?.Text ?? string.Empty,
                     TemplateMode = templateComboBox?.SelectedItem?.ToString(),
                     CustomText = txtCustomText?.Text ?? string.Empty,
@@ -2585,7 +3021,10 @@ namespace DxfExporter
                         StartTour(1);
                         break;
                     case "1.0.1.2":
-                        StartTour(16);
+                        StartTour(17);
+                        break;
+                    case "1.0.2.0":
+                        StartTour(13);
                         break;
                 }
             }

@@ -13,6 +13,7 @@ namespace DxfExporter.Scanning
         /// Флаг указывающий нужно ли выгрузить dxf
         /// </summary>
         private bool _needUnload = true;
+        private bool _isExpanded = false;
 
         /// <summary>
         /// Обозначение элемента.
@@ -42,17 +43,33 @@ namespace DxfExporter.Scanning
         /// <summary>
         /// Толщина
         /// </summary>
-        public double Thickness { get; set; }
+        public double? Thickness { get; set; }
         
         /// <summary>
         /// Количество
         /// </summary>
-        public double Quantity { get; set; }
+        public double? Quantity { get; set; }
         
         /// <summary>
         /// Видимое имя детали
         /// </summary>
         public string DisplayName { get; set; }
+
+        /// <summary>
+        /// Признак строки-группы для параметрической детали/детали по состояниям.
+        /// Для таких строк в UI отображается expander с дочерними исполнениями.
+        /// </summary>
+        public bool IsExpanderGroup { get; set; } = false;
+
+        /// <summary>
+        /// Список исполнений/состояний внутри строки-группы.
+        /// </summary>
+        public System.Collections.ObjectModel.ObservableCollection<StructureClass> GroupMembers { get; set; } = new();
+
+        /// <summary>
+        /// Дочерние исполнения/состояния, собранные на этапе сканирования детали.
+        /// </summary>
+        public System.Collections.ObjectModel.ObservableCollection<StructureClass> ChildMembers { get; set; } = new();
 
         /// <summary>
         /// Свойства выгрузки
@@ -184,6 +201,22 @@ namespace DxfExporter.Scanning
                 {
                     _needUnload = value;
                     OnPropertyChanged(nameof(NeedUnload));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Состояние раскрытия строки-группы.
+        /// </summary>
+        public bool IsExpanded
+        {
+            get => _isExpanded;
+            set
+            {
+                if (_isExpanded != value)
+                {
+                    _isExpanded = value;
+                    OnPropertyChanged(nameof(IsExpanded));
                 }
             }
         }

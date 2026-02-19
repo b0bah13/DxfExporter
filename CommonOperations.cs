@@ -10,7 +10,17 @@ namespace DxfExporter
     {
         public static string ProgramName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name; //имя программы
         public const string AdminEmailAdres = "grahov@szemospb.ru"; //почта админа
-        
+
+        /// <summary>
+        /// Словарь для замены запрещённых символов в параметрических деталях
+        /// </summary>
+        public static Dictionary<string, string> ReplaceDictionary = new Dictionary<string, string>()
+        {
+            {"/","(_FS)"}, {"*","(_AS)"}, {"?","(_QM)"}, {"\\","(_BS)"},
+            {":","(_CO)"}, {"\"","(_DQ)"}, {"|","(_VB)"}, {"<","(_LB)"},
+            {">","(_RB)"},
+        };
+
         // Метод для отправки сообщение на почту при ошибке
         public static void EmailOnError(string errorMessage, string errorTrace, string userName, List<string> infoList = null)
         {
@@ -103,6 +113,22 @@ namespace DxfExporter
             return openedDoc;
         }
 
+        /// <summary>
+        /// Закрываем файлы, очищаем ресурсы.
+        /// </summary>
+        /// <param name="doc">Файл который нужно закрыть. Передаваем динамически</param>
+        public static void ReleaseObject(dynamic doc)
+        {
+            try
+            {
+                doc?.Close();
+                if (doc != null) Marshal.ReleaseComObject(doc);
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+            }
+        }
     }
 
 }

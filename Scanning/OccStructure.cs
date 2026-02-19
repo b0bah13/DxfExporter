@@ -27,5 +27,10 @@ namespace DxfExporter.Scanning
         /// </summary>
         public ComponentOccurrence Occurrence { get; set; }
 
+        /// <summary>
+        /// Имя исполнения/состояния.
+        /// </summary>
+        public string MemberName { get; set; } = string.Empty;
+
     }
 }

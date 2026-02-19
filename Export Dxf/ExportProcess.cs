@@ -101,8 +101,8 @@ namespace DxfExporter.Export_Dxf
                 [HeaderConst.Обозначение] = s => s.PartNumber ?? "",
                 [HeaderConst.Наименование] = s => s.Description ?? "",
                 [HeaderConst.Материал] = s => s.Material ?? "",
-                [HeaderConst.Толщина] = s => s.Thickness.ToString(),
-                [HeaderConst.Количество] = s => s.Quantity.ToString()
+                [HeaderConst.Толщина] = s => s.Thickness?.ToString() ?? string.Empty,
+                [HeaderConst.Количество] = s => s.Quantity?.ToString() ?? string.Empty
             };
         
 
@@ -187,6 +187,13 @@ namespace DxfExporter.Export_Dxf
                         continue;
                     }
 
+                    //проверка есть ли такой путь
+                    if (string.IsNullOrEmpty(fileStructure.Path) || !Path.Exists(fileStructure.Path))
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {fileStructure.DisplayName}");
+                        continue;
+                    }
+
                     bool wasOpened = false;
 
                     PartDocument pDoc = CommonOperations.GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
@@ -266,7 +273,7 @@ namespace DxfExporter.Export_Dxf
                             //если нужно создать подпапку толщина
                             if (ctx.FolderSettings.SubFolderThickness)
                             {
-                                string thick = $"{fileStructure.Thickness} мм";
+                                string thick = $"{fileStructure.Thickness?.ToString() ?? "-"} мм";
                                 dir = Path.Combine(dir, thick);
                             }
 
@@ -390,7 +397,7 @@ namespace DxfExporter.Export_Dxf
                         //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
                         if (pDoc.FullFileName != ctx.ScanFilePath && wasOpened)
                         {
-                            ReleaseObject(pDoc);
+                            CommonOperations.ReleaseObject(pDoc);
                         }
                     }
                     
@@ -538,23 +545,6 @@ namespace DxfExporter.Export_Dxf
             }
 
             return drawingsDir;
-        }
-
-        /// <summary>
-        /// Закрываем файлы, очищаем ресурсы.
-        /// </summary>
-        /// <param name="doc">Файл который нужно закрыть. Передаваем динамически</param>
-        private void ReleaseObject(dynamic doc)
-        {
-            try
-            {
-                doc?.Close();
-                if (doc != null) Marshal.ReleaseComObject(doc);
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e.Message);
-            }
         }
 
         /// <summary>
