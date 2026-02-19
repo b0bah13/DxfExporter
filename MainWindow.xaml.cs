@@ -56,6 +56,7 @@ namespace DxfExporter
         private bool _isApplyingSettings;
         private bool _isSettingsInitialized;
         private bool _isColumnWidthSyncSubscribed;
+        private bool _isContextMenuSyncing;
         private readonly HashSet<DataGrid> _openedDetailsGrids = new();
 
         private static readonly JsonSerializerOptions SettingsJsonOptions = new JsonSerializerOptions
@@ -935,6 +936,7 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void Menu_Checked_General(object sender, RoutedEventArgs e)
         {
+            if (_isContextMenuSyncing) return;
             if (sender is not MenuItem menuItem) return;
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
@@ -977,6 +979,7 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void Menu_Unchecked_General(object sender, RoutedEventArgs e)
         {
+            if (_isContextMenuSyncing) return;
             if (sender is not MenuItem menuItem) return;
             string propertyName = menuItem.Tag?.ToString();
             if (string.IsNullOrEmpty(propertyName)) return;
@@ -1118,34 +1121,59 @@ namespace DxfExporter
             var first = currentGrid.SelectedItems[0] as StructureClass;
             if (first == null) return;
 
-            foreach (MenuItem item in menu.Items.OfType<MenuItem>())
+            _isContextMenuSyncing = true;
+            try
             {
-                if (item.Tag == null) continue;
+                bool hideMaterialActions = first.IsExpanderGroup;
 
-                string tag = item.Tag.ToString();
-
-                switch (tag)
+                foreach (object menuObject in menu.Items)
                 {
-                    case "NeedUnload":
-                        item.IsChecked = first.NeedUnload;
-                        break;
-                    case "NeedGrav":
-                        item.IsChecked = first.NeedGrav;
-                        break;
-                    case "NeedBendLine":
-                        item.IsChecked = first.NeedBendLine;
-                        break;
-                    case "UnloadInTemplate":
-                        item.IsChecked = first.UnloadInTemplate;
-                        break;
-                    case "UnloadAllVers":
+                    if (menuObject is MenuItem item)
                     {
-                        bool can = first.IsIPart || first.IsModelStatePart;
-                        item.IsEnabled = can;
-                        item.IsChecked = can && first.UnloadAllVers;
-                        break;
+                        if (item.Header is string header &&
+                            (header == "Изменить материал" || header == "Добавить материал"))
+                        {
+                            item.Visibility = hideMaterialActions ? Visibility.Collapsed : Visibility.Visible;
+                            continue;
+                        }
+
+                        if (item.Tag == null) continue;
+
+                        string tag = item.Tag.ToString();
+
+                        switch (tag)
+                        {
+                            case "NeedUnload":
+                                item.IsChecked = first.NeedUnload;
+                                break;
+                            case "NeedGrav":
+                                item.IsChecked = first.NeedGrav;
+                                break;
+                            case "NeedBendLine":
+                                item.IsChecked = first.NeedBendLine;
+                                break;
+                            case "UnloadInTemplate":
+                                item.IsChecked = first.UnloadInTemplate;
+                                break;
+                            case "UnloadAllVers":
+                            {
+                                bool can = first.IsIPart || first.IsModelStatePart;
+                                item.IsEnabled = can;
+                                item.IsChecked = can && first.UnloadAllVers;
+                                break;
+                            }
+                        }
+                    }
+                    else if (menuObject is Separator separator)
+                    {
+                        separator.Visibility = hideMaterialActions ? Visibility.Collapsed : Visibility.Visible;
+                        hideMaterialActions = false;
                     }
                 }
+            }
+            finally
+            {
+                _isContextMenuSyncing = false;
             }
         }
 
@@ -2569,12 +2597,6 @@ namespace DxfExporter
                     continue;
                 }
 
-                if (!string.IsNullOrWhiteSpace(structureClass.Status))
-                {
-                    SelectDetails(structureClass.ChildMembers);
-                    continue;
-                }
-                
                 if (string.IsNullOrEmpty(structureClass.Path))
                 {
                     structureClass.RowColor = System.Windows.Media.Brushes.OrangeRed;
