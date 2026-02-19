@@ -1835,8 +1835,10 @@ namespace DxfExporter
                 case CallSource.Export:
                     //Сброс строки поиска, что бы взять данные из scanData
                     searchBox.Clear();
-
                     scanData.SelectedItems.Clear();
+
+                    // снять подсветку деталей
+                    RemoveColorDetails(FlattenForProcessing(scanData.ItemsSource as IEnumerable<StructureClass>));
 
                     OverlayText.Text = CommonConstants.OverlayDxf;
                     txtStatus.Text = "Выгрузка Dxf...";
@@ -1941,19 +1943,15 @@ namespace DxfExporter
                 var choiceResult = wpfWin.SelectedMaterials;
                 if (choiceResult == null || choiceResult.Count == 0) return;
 
-                var procData = FlattenForProcessing(_displayScanData);
-
                 // Чтобы не было проблем с изменением коллекции во время перебора — 
-                // работаем с копией списка индексов или оригинальных элементов
+                // работаем с копией оригинальных элементов
                 var selectedCopy = selected.ToList(); // фиксируем текущее состояние
 
                 foreach (string newMaterial in choiceResult)
                 {
                     // Проходим по оригинальным элементам в порядке их появления в коллекции
-                    for (int i = 0; i < procData.Count; i++)
+                    foreach (var original in selectedCopy)
                     {
-                        var original = procData[i];
-
                         // Проверяем, что это один из выбранных и материал отличается
                         if (!selectedCopy.Contains(original)) continue;
                         if (original.Material == newMaterial) continue;
@@ -1971,10 +1969,8 @@ namespace DxfExporter
                         copy.RowColor = System.Windows.Media.Brushes.Azure;
 
                         // Вставляем СРАЗУ ПОСЛЕ оригинала
-                        procData.Insert(i + 1, copy);
+                        InsertCopyAfterOriginal(original, copy);
 
-                        // Важно: после вставки все последующие индексы сдвигаются → увеличиваем i
-                        i++;
                     }
                 }
                 /*
@@ -2003,7 +1999,33 @@ namespace DxfExporter
                 Debug.WriteLine(e.StackTrace);
             }
         }
-        
+        private void InsertCopyAfterOriginal(StructureClass original, StructureClass copy)
+        {
+            if (_displayScanData == null || _displayScanData.Count == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _displayScanData.Count; i++)
+            {
+                var row = _displayScanData[i];
+
+                if (ReferenceEquals(row, original))
+                {
+                    _displayScanData.Insert(i + 1, copy);
+                    return;
+                }
+
+                if (!row.IsExpanderGroup) continue;
+
+                int memberIndex = row.ChildMembers.IndexOf(original);
+                if (memberIndex < 0) continue;
+
+                row.ChildMembers.Insert(memberIndex + 1, copy);
+                return;
+            }
+        }
+
         /// <summary>
         /// Получение списка материалов из Inventor
         /// </summary>
@@ -2519,7 +2541,7 @@ namespace DxfExporter
 
                 if (string.IsNullOrEmpty(structureClass.Path))
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightCoral;
+                    structureClass.RowColor = System.Windows.Media.Brushes.LightSalmon;
                     continue;
                 }
 
@@ -2556,7 +2578,31 @@ namespace DxfExporter
                 }
             }
         }
-        
+
+        /// <summary>
+        /// Снять подсветку деталей
+        /// </summary>
+        /// <param name="scannedData">Данные сканирования</param>
+        private static void RemoveColorDetails(IEnumerable<StructureClass>? scannedData)
+        {
+            if (scannedData == null) return;
+
+            foreach (StructureClass structureClass in scannedData)
+            {
+                if (structureClass.IsExpanderGroup && structureClass.ChildMembers?.Count > 0)
+                {
+                    SelectDetails(structureClass.ChildMembers);
+                    continue;
+                }
+
+                if (structureClass.RowColor == System.Windows.Media.Brushes.LightGreen || structureClass.RowColor == System.Windows.Media.Brushes
+                    .LightCoral)
+                {
+                    structureClass.RowColor = System.Windows.Media.Brushes.White;
+                }
+            }
+        }
+
         /// <summary>
         /// Процесс поиска в таблице
         /// </summary>
