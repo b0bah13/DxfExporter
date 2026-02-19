@@ -1108,6 +1108,16 @@ namespace DxfExporter
             }
         }
 
+        private static StructureClass? GetContextMenuStateSource(StructureClass selectedRow)
+        {
+            if (selectedRow.IsExpanderGroup)
+            {
+                return selectedRow.ChildMembers?.FirstOrDefault();
+            }
+
+            return selectedRow;
+        }
+
         /// <summary>
         /// Срабатывает каждый раз при открытии контекстного меню
         /// Здесь мы синхронизируем состояние чекбоксов с первой выбранной строкой
@@ -1118,13 +1128,16 @@ namespace DxfExporter
             if (menu.PlacementTarget is not DataGrid currentGrid) return;
             if (currentGrid.SelectedItems.Count == 0) return;
 
-            var first = currentGrid.SelectedItems[0] as StructureClass;
-            if (first == null) return;
+            var firstSelected = currentGrid.SelectedItems[0] as StructureClass;
+            if (firstSelected == null) return;
+
+            var stateSource = GetContextMenuStateSource(firstSelected);
+            if (stateSource == null) return;
 
             _isContextMenuSyncing = true;
             try
             {
-                bool hideMaterialActions = first.IsExpanderGroup;
+                bool hideMaterialActions = firstSelected.IsExpanderGroup;
 
                 foreach (object menuObject in menu.Items)
                 {
@@ -1144,22 +1157,22 @@ namespace DxfExporter
                         switch (tag)
                         {
                             case "NeedUnload":
-                                item.IsChecked = first.NeedUnload;
+                                item.IsChecked = stateSource.NeedUnload;
                                 break;
                             case "NeedGrav":
-                                item.IsChecked = first.NeedGrav;
+                                item.IsChecked = stateSource.NeedGrav;
                                 break;
                             case "NeedBendLine":
-                                item.IsChecked = first.NeedBendLine;
+                                item.IsChecked = stateSource.NeedBendLine;
                                 break;
                             case "UnloadInTemplate":
-                                item.IsChecked = first.UnloadInTemplate;
+                                item.IsChecked = stateSource.UnloadInTemplate;
                                 break;
                             case "UnloadAllVers":
                             {
-                                bool can = first.IsIPart || first.IsModelStatePart;
+                                bool can = stateSource.IsIPart || stateSource.IsModelStatePart;
                                 item.IsEnabled = can;
-                                item.IsChecked = can && first.UnloadAllVers;
+                                item.IsChecked = can && stateSource.UnloadAllVers;
                                 break;
                             }
                         }
