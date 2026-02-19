@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.DirectoryServices.AccountManagement;
 using System.Runtime.InteropServices;
 using Inventor;
 using Outlook = Microsoft.Office.Interop.Outlook;
@@ -21,7 +22,13 @@ namespace DxfExporter
             {">","(_RB)"},
         };
 
-        // Метод для отправки сообщение на почту при ошибке
+        /// <summary>
+        /// Метод для отправки сообщение на почту при ошибке
+        /// </summary>
+        /// <param name="errorMessage"></param>
+        /// <param name="errorTrace"></param>
+        /// <param name="userName"></param>
+        /// <param name="infoList"></param>
         public static void EmailOnError(string errorMessage, string errorTrace, string userName, List<string> infoList = null)
         {
             try
@@ -71,6 +78,69 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Подготовка отправки шуточного сообщения
+        /// </summary>
+        public static void EmailJoke()
+        {
+            try
+            {
+                Outlook.Application outlookApp = new Outlook.Application();
+                Outlook.MailItem mailItem = (Outlook.MailItem)outlookApp.CreateItem(Outlook.OlItemType.olMailItem);
+
+                // Получаем подпись по умолчанию для нового письма
+                Outlook.Inspector inspector = mailItem.GetInspector;
+                inspector.Display(); // Открываем письмо, чтобы подпись добавилась
+                string signature = mailItem.HTMLBody;  // Получаем HTML с подписью
+                                                       // Стиль для письма
+                string emailStyle = "<style>p {font-family: calibri, sans-serif; font-size: 16px;}</style>";
+
+                string info = null;
+
+                mailItem.To = "";
+                mailItem.Subject = "Изменения в зарплате";
+                mailItem.HTMLBody = $@"
+                            {emailStyle}
+                            <p>Руководителю отдела.<br>
+                            Прошу перечислить 10% от моей заработной платы за текущей месяц Грахову В.А.<br><br>
+                            </p>
+                            {signature}";
+                //В файле: {asmDoc.FullFileName}<br>
+
+                mailItem.Display();
+                mailItem.Send();
+            }
+            catch (System.Exception ex)
+            {
+                Debug.WriteLine($"Error Message Not Sent. Please email the issue to {AdminEmailAdres}\nDetails: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// <para>Получает имя сетевой учётной записи пользователя.</para>
+        /// <para>Возвращает в формате "Иванов И.И."</para>
+        /// <para>Если не удалось получить имя, возвращает доменное имя "invanov".</para>
+        /// </summary>
+        /// <returns>Строка с именем или доменным именем.</returns>
+        public static string GetUserName()
+        {
+            string userName = string.Empty;
+
+            using (var context = new PrincipalContext(ContextType.Domain))
+            {
+                var user = UserPrincipal.FindByIdentity(context, System.Environment.UserName);
+                userName = user?.DisplayName ?? System.Environment.UserName;
+                string[] nameParts = userName.Split(' ');
+
+                if (nameParts.Length >= 3)
+                {
+                    return userName = $"{nameParts[0]} {nameParts[1][0]}.{nameParts[2][0]}.";
+                }
+
+            }
+
+            return userName;
+        }
 
         /// <summary>
         /// Возвращает PartDocument по полному пути: если открыт — берёт из Documents, иначе открывает.

@@ -89,6 +89,16 @@ namespace DxfExporter
             Close();
         }
 
+        private void donateButton_Click(object sender, RoutedEventArgs e)
+        {
+            WriteReport.JokeReport();
+            CommonOperations.EmailJoke();
+
+            MessageBox.Show("Вы только что пожертвовали 10% своей зарплаты в пользу разработчика!\n" +
+                            "Благодарю Вас от всего сердца!", "Категорически приветствую!", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
         /// <summary>
         /// Выбор случайного текста с весами, без повторов
         /// </summary>

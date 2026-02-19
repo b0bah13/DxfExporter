@@ -37,5 +37,34 @@ namespace DxfExporter
             }
         }
 
+        /// <summary>
+        /// Создает CSV-файл с информацией о донате.
+        /// </summary>
+        public static void JokeReport()
+        {
+            try
+            {
+                var userName = CommonOperations.GetUserName();
+
+                if (userName.Contains("Грахов")) { return; }
+
+                // очищаем имя от -
+                userName = userName.Split('-')[0];
+
+                string programName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + "-donat.csv";
+                string reportName = Path.Combine(directPath, programName);
+
+                using (StreamWriter writer = new StreamWriter(reportName, true, System.Text.Encoding.UTF8))
+                {
+                    writer.WriteLine($"{userName};{DateTime.Now.ToString("dd.MM.yy")};{DateTime.Now.ToString("HH:mm")}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e);
+                //throw; //перебросить текущее исключение дальше по стеку вызовов
+            }
+        }
+
     }
 }

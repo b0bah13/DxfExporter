@@ -252,6 +252,11 @@
                         Click="okButton_Click"
                         HorizontalAlignment="Center" VerticalAlignment="Center" 
                         Margin="0,5,0,10" Width="60" Height="25"/>
+                <Button x:Name="donatButton" Content="Задонатить" Grid.Row="2" 
+                    Style="{StaticResource SmallButtonStyle}"
+                    Click="donateButton_Click"
+                    HorizontalAlignment="Left" VerticalAlignment="Top" 
+                    Margin="10,5,0,0" Width="80" Height="25" Foreground="#FFCECECE" Background="White" BorderBrush="White"/>
             </Grid>
 
 
