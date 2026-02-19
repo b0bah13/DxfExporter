@@ -14,11 +14,11 @@ namespace DxfExporter.Scanning
         /// </summary>
         public void AddNode(StructureClass node)
         {
-            if (node != null && ScannedData.All(n => n.Path != node.Path || n.MemberName != node.MemberName))
+            if (node != null && !ScannedData.Any(n =>
+                    n.Path == node.Path && n.MemberName == node.MemberName))
             {
                 ScannedData.Add(node);
             }
-            
         }
 
         /// <summary>

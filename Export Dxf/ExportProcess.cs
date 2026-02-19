@@ -209,6 +209,8 @@ namespace DxfExporter.Export_Dxf
                         {
                             ctx.InvApp.SilentOperation = true;
                             pDoc = CommonOperations.NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
+                            sheetMetalCompDef = (SheetMetalComponentDefinition)pDoc.ComponentDefinition;
+
                             foreach (var modelState in sheetMetalCompDef.ModelStates.Cast<ModelState>()
                                          .Where(modelState => modelState.Name == fileStructure.MemberName))
                             {
