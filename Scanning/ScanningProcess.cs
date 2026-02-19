@@ -582,8 +582,8 @@ namespace DxfExporter.Scanning
                 ErrorMatThick = errorMatThick,
                 FakeThickness = realThick == 0 ? false : realThick != thick
             };
-            
-            if (includeChildScan && (structure.IsIPart || structure.IsModelStatePart))
+
+            if (CheckSettings.ScanAllIpart && includeChildScan && (structure.IsIPart || structure.IsModelStatePart))
             {
                 _mainWindow.UpdateOverlay(true);
                 _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDataIpart, partDoc.DisplayName);

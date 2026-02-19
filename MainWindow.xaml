@@ -479,7 +479,7 @@
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.58*"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.58*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" Width="0.5*"/>
                                                 <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True">
@@ -493,9 +493,9 @@
 
                                             <DataGrid.ContextMenu>
                                                 <ContextMenu Opened="ContextMenu_Opened">
-                                                    <MenuItem Header="Изменить материал" Click="MenuItem_ChangeMaterial_Click"/>
+                                                    <!-- <MenuItem Header="Изменить материал" Click="MenuItem_ChangeMaterial_Click"/> -->
                                                     <!-- <MenuItem Header="Добавить материал" Click="MenuItem_AddMaterial_Click"/> -->
-                                                    <Separator/>
+                                                    <!-- <Separator/> -->
 
                                                     <MenuItem Header="Выгрузить" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружен DXF" ToolTipService.InitialShowDelay="400" Tag="NeedUnload"/>
                                                     <MenuItem Header="Гравировка" IsCheckable="True" Checked="Menu_Checked_General" Unchecked="Menu_Unchecked_General" ToolTip="Свойство указывающее будет ли выгружена гравировка" ToolTipService.InitialShowDelay="400" Tag="NeedGrav"/>
@@ -556,8 +556,8 @@
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
 
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="0.58*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="0.5*"/>
@@ -631,6 +631,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
@@ -645,31 +646,42 @@
                                 <CheckBox x:Name="userDirect" Content="Пользовательское расположение папки DXF" 
                                     IsChecked="False" Margin="5,3,5,5" 
                                     ToolTipService.InitialShowDelay="400"
-                                    Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked"/>
+                                    Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"/>
                                 <CheckBox x:Name="categorizeMaterial" Content="Распределить по материалам" 
                                           IsChecked="True" Margin="5,0,5,5" 
                                           ToolTipService.InitialShowDelay="400"
-                                          Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked" Grid.Row="1"/>
+                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked" Grid.Row="1"/>
                                 <CheckBox x:Name="categorizeThickness" Content="Распределить по толщинам" Grid.Row="2" 
                                           IsChecked="True" Margin="5,0,5,0" 
                                           ToolTipService.InitialShowDelay="400"
-                                          Checked="categorizeFolder_Checked" Unchecked="categorizeFolder_Checked"/>
+                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"/>
+                            </Grid>
+                        </GroupBox>
+                        <GroupBox Header="Исполнения деталей" Width="600" HorizontalAlignment="Left" Grid.Row="1">
+                            <Grid HorizontalAlignment="Left">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <CheckBox x:Name="scanAllIpart" Content="Сканировать все исполнения детали"
+                                    IsChecked="False" Margin="5,3,5,5" 
+                                    ToolTipService.InitialShowDelay="400"
+                                    Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"/>
                             </Grid>
                         </GroupBox>
 
-                        <GroupBox x:Name="gbCheckGab" Header="Проверка габаритов развёртки" Grid.Row="1" HorizontalAlignment="Left" Width="600">
+                        <GroupBox x:Name="gbCheckGab" Header="Проверка габаритов развёртки" Grid.Row="2" HorizontalAlignment="Left" Width="600">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
-                                <CheckBox
-                                    Unchecked="checkGab_Checked" x:Name="checkGab" 
+                                <CheckBox x:Name="checkGab" 
                                     Margin="5,3,5,5" IsChecked="True" 
                                     ToolTipService.InitialShowDelay="400"
                                     Content="Проверить габарит развёртки при выгрузке" 
-                                    Checked="checkGab_Checked" HorizontalAlignment="Left"/>
+                                    Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"
+                                    HorizontalAlignment="Left"/>
 
                                 <Expander Header="Ссылка на таблицу соответствия" Grid.Row="1" 
                                           Margin="5,0,5,3">
@@ -695,7 +707,7 @@
 
                         <!-- Основная область (будет отключаться при Стандарт / Материал) -->
                         <GroupBox x:Name="gbMaskSettings"
-                                  Grid.Row="2" Header="Шаблон имени файла" 
+                                  Grid.Row="3" Header="Шаблон имени файла" 
                                   Margin="0,5,0,0"
                                   
                                   Width="600" HorizontalAlignment="Left" VerticalAlignment="Top">

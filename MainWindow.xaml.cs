@@ -99,6 +99,7 @@ namespace DxfExporter
         { 
             public bool CheckGab { get; set; } = true;
             public string PathTable { get; set; } = defaultPathTable;
+            public bool ScanAllIpart { get; set; } = false;
         }
 
         /// <summary>
@@ -106,10 +107,12 @@ namespace DxfExporter
         /// </summary>
         private sealed class SettingsTabState
         {
+            //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
             public bool UserDxfDir { get; set; }
             public bool CategorizeMaterial { get; set; } = true;
             public bool CategorizeThickness { get; set; } = true;
             public bool CheckGab { get; set; } = true;
+            public bool ScanAllIpart { get; set; } = false;
             public string? TablePath { get; set; }
             public string? TemplateMode { get; set; }
             public string? CustomText { get; set; }
@@ -457,11 +460,11 @@ namespace DxfExporter
         }
 
         /// <summary>
-        /// Обработка чекбоксов выгрузки подпапок
+        /// Обработка чекбоксов
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void categorizeFolder_Checked(object sender, RoutedEventArgs e)
+        private void processCheckBox_Checked(object sender, RoutedEventArgs e)
         {
             var checkBox = sender as CheckBox;
 
@@ -475,6 +478,12 @@ namespace DxfExporter
                     break;
                 case "userDirect":
                     FolderSettings.UserDxfDir = userDirect.IsChecked == true;
+                    break;
+                case "checkGab":
+                    CheckSettings.CheckGab = checkGab.IsChecked == true;
+                    break;
+                case "scanAllIpart":
+                    CheckSettings.ScanAllIpart = scanAllIpart.IsChecked == true;
                     break;
             }
 
@@ -535,27 +544,7 @@ namespace DxfExporter
                     break;
             }
         }
-
-        /// <summary>
-        /// Обработка чекбокса проверки габарита
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void checkGab_Checked(object sender, RoutedEventArgs e)
-        {
-            var checkBox = sender as CheckBox;
-
-            switch (checkBox.Name)
-            {
-                case "checkGab":
-                    CheckSettings.CheckGab = checkGab.IsChecked == true;
-                    break;
-            }
-
-            UpdateTooltip();
-            SaveSettingsTabState();
-        }
-
+        
         /// <summary>
         /// Открывает папку
         /// </summary>
@@ -671,8 +660,10 @@ namespace DxfExporter
             categorizeMaterial.IsChecked = true;
             categorizeThickness.IsChecked = true;
             checkGab.IsChecked = true;
+            scanAllIpart.IsChecked = false;
             TablePath.Text = defaultPathTable;
             templateComboBox.SelectedIndex = 0;
+            //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
         }
 
         #region Обработка выборка маски выгрузки
@@ -2520,7 +2511,6 @@ namespace DxfExporter
 
         /// <summary>
         /// Копирует текущую ширину колонок основной таблицы во вложенную таблицу.
-        /// TODO: при необходимости здесь можно привязать не все колонки, а только часть.
         /// </summary>
         private void ApplyBaseColumnsWidthToNested(DataGrid nestedGrid)
         {
@@ -2790,8 +2780,16 @@ namespace DxfExporter
                     : "Габарит развёртки проверятся не будет"; //Выключено
             }
 
+            if (scanAllIpart != null)
+            {
+                scanAllIpart.ToolTip = scanAllIpart?.IsChecked == true
+                    ? "Сканирует все исполнения/состояния детали" //Включено: 
+                    : "Сканирует только активное исполнение/состояние детали"; //Выключено
+            }
+
+            //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
         }
-        
+
         /// <summary>
         /// Загружает состояние элементов вкладки настроек из внешнего JSON-файла, если он существует.
         /// </summary>
@@ -2813,6 +2811,8 @@ namespace DxfExporter
                 categorizeMaterial.IsChecked = state.CategorizeMaterial;
                 categorizeThickness.IsChecked = state.CategorizeThickness;
                 checkGab.IsChecked = state.CheckGab;
+                scanAllIpart.IsChecked = state.ScanAllIpart;
+                //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
 
                 string tablePath = string.IsNullOrWhiteSpace(state.TablePath) ? defaultPathTable : state.TablePath;
                 TablePath.Text = File.Exists(tablePath) ? tablePath : defaultPathTable;
@@ -2865,10 +2865,12 @@ namespace DxfExporter
             {
                 var state = new SettingsTabState
                 {
+                    //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
                     UserDxfDir = userDirect?.IsChecked == true,
                     CategorizeMaterial = categorizeMaterial?.IsChecked == true,
                     CategorizeThickness = categorizeThickness?.IsChecked == true,
                     CheckGab = checkGab?.IsChecked == true,
+                    ScanAllIpart =  scanAllIpart?.IsChecked == true,
                     TablePath = TablePath?.Text ?? string.Empty,
                     TemplateMode = templateComboBox?.SelectedItem?.ToString(),
                     CustomText = txtCustomText?.Text ?? string.Empty,
