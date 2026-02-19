@@ -2145,7 +2145,7 @@ namespace DxfExporter
                     // Выбираем детали inventor
                     choiceFiles = SelectedFiles(parentDirectory);
 
-                    if (choiceFiles?.Count == 0) return;
+                    if (choiceFiles == null || choiceFiles?.Count == 0) return;
                 }
 
                 ScanningProcess _processor = new ScanningProcess(this, CheckSettings);
