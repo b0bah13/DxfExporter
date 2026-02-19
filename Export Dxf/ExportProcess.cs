@@ -202,6 +202,8 @@ namespace DxfExporter.Export_Dxf
                         {
                             ctx.InvApp.SilentOperation = true;
                             pDoc = CommonOperations.NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
+                            sheetMetalCompDef = (SheetMetalComponentDefinition)pDoc.ComponentDefinition;
+
                             foreach (var modelState in sheetMetalCompDef.ModelStates.Cast<ModelState>()
                                          .Where(modelState => modelState.Name == fileStructure.MemberName))
                             {
@@ -634,7 +636,7 @@ namespace DxfExporter.Export_Dxf
                 // Важно: используем dynamic, потому что точный интерфейс IiLogicAutomation
                 // не всегда доступен без специальной ссылки на Autodesk.iLogic.Interfaces
                 dynamic iLogicAuto = iLogicAddIn.Automation;
-
+                
                 // Запуск внешнего правила
                 // ruleName — это имя файла без расширения .iLogicVb или просто имя правила
                 iLogicAuto.RunExternalRule(pDoc, "Гравировка");
