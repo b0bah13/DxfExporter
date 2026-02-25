@@ -15,6 +15,7 @@ namespace DxfExporter
         private bool _fileError;
         private string _systemMessage = string.Empty;
         private string _userName = string.Empty;
+        private int _userClickCount = 0;
 
         public bool NeedExit
         {
@@ -44,6 +45,12 @@ namespace DxfExporter
         {
             get { lock (_lock) return _userName ?? string.Empty; }
             set { lock (_lock) _userName = value ?? string.Empty; }
+        }
+
+        public int UserClickCount
+        {
+            get { lock (_lock) return _userClickCount; }
+            set { lock (_lock) _userClickCount = value; }
         }
 
         /// <summary>

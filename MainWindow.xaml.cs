@@ -587,6 +587,10 @@ namespace DxfExporter
         {
             LogTextBox.Clear();
             scanData.ItemsSource = null;
+            scanData.Items.Clear();
+            _scanResult?.ClearData();
+            _scanFilePath = String.Empty;
+            _displayScanData.Clear();
             CheckExit.ClearData();
             txtStatus.Text = "Готов к сканированию";
         }
@@ -1710,6 +1714,8 @@ namespace DxfExporter
                 if (CheckExit.NeedExit)
                 {
                     txtStatus.Text = CheckExit.Message;
+                    if (CheckExit.UserClickCount > 1)
+                        ShowAlert();
                     return;
                 }
                 // Перевод результатов сканирования в список для вывода
@@ -2128,6 +2134,8 @@ namespace DxfExporter
             string errText = "Ошибка при добавлении файлов";
             try
             {
+                CheckExit.ClearData();
+
                 // Дать UI возможность обновить интерфейс
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
 
@@ -2145,12 +2153,21 @@ namespace DxfExporter
                     // Выбираем детали inventor
                     choiceFiles = SelectedFiles(parentDirectory);
 
-                    if (choiceFiles == null || choiceFiles?.Count == 0) return;
+                    if (choiceFiles == null || choiceFiles?.Count == 0)
+                    {
+                        CheckExit.UserClickCount++;
+                        if (CheckExit.UserClickCount > 1)
+                            ShowAlert();
+                        return;
+                    }
                 }
 
                 ScanningProcess _processor = new ScanningProcess(this, CheckSettings);
                 ScanResult addResult = await _processor.StartProcessingAsync(_cts.Token, 
-                    callSource, choiceFiles); 
+                    callSource, choiceFiles);
+
+                if (CheckExit.UserClickCount > 1)
+                    ShowAlert();
 
                 if (CheckExit.NeedExit)
                 {
@@ -2356,8 +2373,262 @@ namespace DxfExporter
             _currentIndex++;
         }
 
-        #endregion
+        /// <summary>
+        /// Информация для пользователя, если много раз жмёт на кнопку.
+        /// </summary>
+        async private void ShowAlert()
+        {
+            // Путь к папке с изображениями
+            string alertDir = @"K:\Автоматизация процессов\Report\Alert";
+            // Проверка существования директории
+            if (!Directory.Exists(alertDir)) return;
+
+            // Словарь: количество кликов → имя файла
+            var alertMap = new Dictionary<int, string>
+            {
+                { 2, "1.png" },
+                { 3, "2.png" },
+                { 4, "3.png" },
+                { 5, "4.png" }
+            };
+
+            // Если для текущего количества кликов нет сценария — выходим
+            if (!alertMap.TryGetValue(CheckExit.UserClickCount, out string fileName))
+                return;
+
+            // Формируем полный путь
+            string filePath = Path.Combine(alertDir, fileName);
+
+            // Проверка существования файла
+            if (!File.Exists(filePath)) return;
+            
+            // Создание и показ окна
+            var alertWindow = new AlertWindow(filePath, Width, Height, Left, Top, WindowState);
+            alertWindow.ShowDialog();
+            
+            // Если достигнут финальный уровень — закрываем окно
+            if (CheckExit.UserClickCount == 5)
+            {
+                //Выбирает и запускает случайный сценарий хаоса.
+                int scenario = _rnd.Next(0, 4);
+
+                switch (scenario)
+                {
+                    case 0:
+                        await PsychologicalChaosAsync();
+                        break;
+                    case 1:
+                        await TeleportChaosAsync();
+                        break;
+                    case 2:
+                        await ShakeAndCollapseChaosAsync();
+                        break;
+                    case 3:
+                        await RunChaosAsync();
+                        break;
+                }
+            }
+
+            /*
+            switch (CheckExit.UserClickCount)
+            {
+                case 2:
+                    MessageBox.Show("Не стоит пытаться добавлять файлы, если ничего не выбрано.", CheckExit.UserClickCount.ToString());
+                    break;
+                case 3:
+                    MessageBox.Show("Ты серьёзно? Зачем? У тебя нет файлов!", CheckExit.UserClickCount.ToString());
+                    break;
+                case 4:
+                    MessageBox.Show("Ты начинаешь меня злить! Предупреждаю о последствиях!", CheckExit.UserClickCount.ToString());
+                    break;
+                case 5:
+                    MessageBox.Show("Ну всё! Сам напросился!", CheckExit.UserClickCount.ToString());
+                    Close();
+                    break;
+            }
+            */
+
+        }
+
+        /// <summary>
+        /// Генератор случайных чисел для хаотичных сценариев.
+        /// </summary>
+        private readonly Random _rnd = new Random();
         
+        /// <summary>
+        /// Запускает хаотичное поведение окна перед закрытием.
+        /// </summary>
+        private async Task RunChaosAsync()
+        {
+            Random rnd = new Random();
+
+            // Получаем границы виртуального экрана (все мониторы)
+            double screenWidth = SystemParameters.VirtualScreenWidth;
+            double screenHeight = SystemParameters.VirtualScreenHeight;
+
+            DateTime endTime = DateTime.Now.AddSeconds(7); // 5–10 секунд можно менять
+
+            while (DateTime.Now < endTime)
+            {
+                int action = rnd.Next(0, 4);
+
+                switch (action)
+                {
+                    case 0: // Свернуть
+                        WindowState = WindowState.Minimized;
+                        break;
+
+                    case 1: // Развернуть
+                        WindowState = WindowState.Maximized;
+                        break;
+
+                    case 2: // Случайный размер
+                        WindowState = WindowState.Normal;
+                        Width = rnd.Next(300, 900);
+                        Height = rnd.Next(200, 700);
+                        break;
+
+                    case 3: // Перекинуть на случайную позицию
+                        WindowState = WindowState.Normal;
+                        Left = rnd.Next(0, (int)(screenWidth - Width));
+                        Top = rnd.Next(0, (int)(screenHeight - Height));
+                        break;
+                }
+
+                await Task.Delay(rnd.Next(500, 1000)); // шаг 0.5–1 сек
+            }
+
+            Close();
+        }
+        
+        /// <summary>
+        /// Запускает последовательность "психологического хаоса":
+        /// уменьшение → дрожание → телепортация → maximize → minimize → закрытие.
+        /// </summary>
+        private async Task PsychologicalChaosAsync()
+        {
+            Random rnd = new Random();
+
+            // Границы всех мониторов
+            double screenWidth = SystemParameters.VirtualScreenWidth;
+            double screenHeight = SystemParameters.VirtualScreenHeight;
+
+            // Обязательно вернуть в нормальный режим
+            WindowState = WindowState.Normal;
+
+            await Task.Delay(300);
+
+            // 1️⃣ Резкое уменьшение (эффект "что происходит?")
+            for (int i = 0; i < 12; i++)
+            {
+                Width *= 0.92;
+                Height *= 0.92;
+
+                // Центрируем относительно текущей позиции
+                Left += 15;
+                Top += 10;
+
+                await Task.Delay(70);
+            }
+
+            await Task.Delay(400);
+
+            // 2️⃣ Дрожание (нервный эффект)
+            for (int i = 0; i < 25; i++)
+            {
+                Left += rnd.Next(-25, 25);
+                Top += rnd.Next(-25, 25);
+                await Task.Delay(40);
+            }
+
+            await Task.Delay(300);
+
+            // 3️⃣ Телепортация по виртуальному экрану
+            for (int i = 0; i < 5; i++)
+            {
+                Left = rnd.Next(0, (int)(screenWidth - Width));
+                Top = rnd.Next(0, (int)(screenHeight - Height));
+
+                await Task.Delay(500);
+            }
+
+            // 4️⃣ Резкий максимайз (пик напряжения)
+            WindowState = WindowState.Maximized;
+            await Task.Delay(800);
+
+            // 5️⃣ Внезапный минимайз
+            WindowState = WindowState.Minimized;
+            await Task.Delay(700);
+
+            // 6️⃣ Возврат и мгновенное закрытие
+            WindowState = WindowState.Normal;
+            await Task.Delay(200);
+
+            Close();
+        }
+
+        /// <summary>
+        /// Телепортация по экранам с миганием поверх всех окон.
+        /// </summary>
+        private async Task TeleportChaosAsync()
+        {
+            WindowState = WindowState.Normal;
+
+            double screenWidth = SystemParameters.VirtualScreenWidth;
+            double screenHeight = SystemParameters.VirtualScreenHeight;
+
+            for (int i = 0; i < 8; i++)
+            {
+                Left = _rnd.Next(0, (int)(screenWidth - Width));
+                Top = _rnd.Next(0, (int)(screenHeight - Height));
+
+                Topmost = true;
+                System.Media.SystemSounds.Exclamation.Play();
+                await Task.Delay(120);
+                Topmost = false;
+
+                await Task.Delay(400);
+            }
+
+            WindowState = WindowState.Maximized;
+            await Task.Delay(700);
+
+            Close();
+        }
+
+        /// <summary>
+        /// Дрожание окна с постепенным сжатием до маленького размера.
+        /// </summary>
+        private async Task ShakeAndCollapseChaosAsync()
+        {
+            WindowState = WindowState.Normal;
+
+            // Дрожание
+            for (int i = 0; i < 30; i++)
+            {
+                Left += _rnd.Next(-20, 20);
+                Top += _rnd.Next(-20, 20);
+                await Task.Delay(40);
+            }
+
+            // Сжатие
+            for (int i = 0; i < 20; i++)
+            {
+                Width *= 0.9;
+                Height *= 0.9;
+                await Task.Delay(60);
+            }
+
+            System.Media.SystemSounds.Hand.Play();
+
+            await Task.Delay(500);
+
+            Close();
+        }
+
+
+        #endregion
+
         #region Обработка окна из другого потока
 
         /// <summary>
@@ -2553,29 +2824,46 @@ namespace DxfExporter
 
                 if (structureClass.NoFlat)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.NoFlat;
+                    if (!structureClass.Status.Contains(ErrorsConst.NoFlat))
+                    {
+                        structureClass.Status += ErrorsConst.NoFlat;
+                        structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    }
                 }
                 else if (structureClass.NullFlat)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.NullFlat;
+                    if (!structureClass.Status.Contains(ErrorsConst.NullFlat))
+                    {
+                        structureClass.Status += ErrorsConst.NullFlat;
+                        structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    }
                 }
                 else if (structureClass.ErrorMatThick)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.ErrorMatThick;
+                    if (!structureClass.Status.Contains(ErrorsConst.ErrorMatThick))
+                    {
+                        structureClass.Status += ErrorsConst.ErrorMatThick;
+                        structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    }
                 }
                 else if (structureClass.FakeThickness)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.FakeThickness;
+                    if (!structureClass.Status.Contains(ErrorsConst.FakeThickness))
+                    {
+                        structureClass.Status += ErrorsConst.FakeThickness;
+                        structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    }
                 }
                 else if (structureClass.BigFlat)
                 {
-                    structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
-                    structureClass.Status += ErrorsConst.BigFlat;
+                    if (!structureClass.Status.Contains(ErrorsConst.BigFlat))
+                    {
+                        structureClass.Status += ErrorsConst.BigFlat;
+                        structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
+                    }
                 }
+
+                structureClass.Status = structureClass.Status.Trim();
             }
         }
 

@@ -79,7 +79,7 @@ namespace DxfExporter.Scanning
 
                 //MessageBox.Show("Test");
 
-                if (_mainWindow.CheckExit.NeedExit)
+                if (_mainWindow.CheckExit.NeedExit && !string.IsNullOrEmpty(_mainWindow.CheckExit.Message))
                 {
                     _mainWindow.Dispatcher.Invoke(() =>
                     {
@@ -217,7 +217,8 @@ namespace DxfExporter.Scanning
             if (doc == null)
             {
                 _mainWindow.CheckExit.NeedExit = true;
-                _mainWindow.CheckExit.Message = "В Inventor нет активного файла!";
+                //_mainWindow.CheckExit.Message = "В Inventor нет активного файла!";
+                _mainWindow.CheckExit.UserClickCount++;
                 return;
             }
 
@@ -777,6 +778,17 @@ namespace DxfExporter.Scanning
 
             try
             {
+                // Получаем количество видимых деталей сразу
+                int partsCount = _invApp.Documents.VisibleDocuments
+                    .Cast<_Document>()
+                    .Count(doc => doc.DocumentType == DocumentTypeEnum.kPartDocumentObject);
+                
+                if (partsCount == 0)
+                {
+                    _mainWindow.CheckExit.UserClickCount ++;
+                    return result;
+                }
+
                 //проходим по всем открытым видимым документам
                 foreach (var pDoc in 
                          from _Document documentsVisibleDocument in _invApp.Documents.VisibleDocuments 
