@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Printing.IndexedProperties;
@@ -245,6 +246,7 @@ namespace DxfExporter.Export_Dxf
                         
                         //Выгрузить dxf
                         ExportDxf();
+                        SaveFlatPatternThumbnail();
                         
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
@@ -382,6 +384,54 @@ namespace DxfExporter.Export_Dxf
                             // Экспорт
                             DataIO dataIO = pDoc.ComponentDefinition.DataIO;
                             dataIO.WriteDataToFile(sOut, System.IO.Path.Combine(subDir, fileName));
+                        }
+
+                        // Создание миниатюры развёртки для отображения в таблице после выгрузки DXF.
+                        void SaveFlatPatternThumbnail()
+                        {
+                            try
+                            {
+                                string thumbsDir = Path.Combine(exportDir, ".thumbs_flat");
+                                if (!Directory.Exists(thumbsDir))
+                                {
+                                    Directory.CreateDirectory(thumbsDir);
+                                }
+
+                                // TODO: При необходимости скорректировать размеры итоговой миниатюры (в пикселях).
+                                const int thumbWidth = 140;
+                                const int thumbHeight = 100;
+                                string tempBmpPath = Path.Combine(thumbsDir, $"{Guid.NewGuid():N}.bmp");
+                                string pngPath = Path.Combine(thumbsDir, $"{Guid.NewGuid():N}.png");
+
+                                // Принудительно активируем документ и подгоняем вид, чтобы получить корректный снимок развёртки.
+                                pDoc.Activate();
+                                var view = ctx.InvApp.ActiveView;
+                                view.Fit(true);
+                                view.Update();
+                                view.SaveAsBitmap(tempBmpPath, thumbWidth, thumbHeight);
+
+                                using (var source = new Bitmap(tempBmpPath))
+                                using (var canvas = new Bitmap(thumbWidth, thumbHeight))
+                                using (var graphics = Graphics.FromImage(canvas))
+                                {
+                                    graphics.Clear(Color.White);
+                                    graphics.DrawImage(source, 0, 0, thumbWidth, thumbHeight);
+                                    canvas.Save(pngPath, System.Drawing.Imaging.ImageFormat.Png);
+                                }
+
+                                if (File.Exists(tempBmpPath))
+                                {
+                                    File.Delete(tempBmpPath);
+                                }
+
+                                fileStructure.FlatPatternThumbnailPath = pngPath;
+                            }
+                            catch (Exception thumbEx)
+                            {
+                                // Ошибка миниатюры не должна ломать основной экспорт DXF.
+                                _mainWindow.UpdateLog($"Не удалось создать миниатюру развёртки: {fileStructure.DisplayName}");
+                                Debug.WriteLine(thumbEx.StackTrace);
+                            }
                         }
                     }
                     catch (Exception ex)
