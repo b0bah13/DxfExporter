@@ -212,6 +212,13 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+            <!--Ограничиваем высоту вложенной таблицы: при большом количестве строк
+                активируется внутренняя вертикальная прокрутка, и последние элементы
+                остаются доступными даже во вложенном режиме.
+            -->
+            <Setter Property="MaxHeight" Value="320"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            
             <Setter Property="RowStyle">
                 <Setter.Value>
                     <Style TargetType="{x:Type DataGridRow}">

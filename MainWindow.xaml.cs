@@ -331,6 +331,12 @@ namespace DxfExporter
                 minMaxInfo.ptMaxSize.Y = Math.Abs(workArea.Bottom - workArea.Top);
             }
 
+            // Важно: при WindowStyle=None ограничение MinWidth/MinHeight может
+            // обходиться на уровне WinAPI. Явно задаём минимальный "трекинговый"
+            // размер, чтобы окно не сжималось ниже предусмотренного макета.
+            minMaxInfo.ptMinTrackSize.X = MinWindowWidthPx;
+            minMaxInfo.ptMinTrackSize.Y = MinWindowHeightPx;
+
             Marshal.StructureToPtr(minMaxInfo, lParam, true);
         }
 
@@ -338,6 +344,16 @@ namespace DxfExporter
         /// Идентификатор сообщения WM_GETMINMAXINFO.
         /// </summary>
         private const int WmGetMinMaxInfoMessage = 0x0024;
+
+        /// <summary>
+        /// Минимальная ширина окна в пикселях.
+        /// </summary>
+        private const int MinWindowWidthPx = 980;
+
+        /// <summary>
+        /// Минимальная высота окна в пикселях.
+        /// </summary>
+        private const int MinWindowHeightPx = 660;
 
         /// <summary>
         /// Флаг получения ближайшего монитора для заданного окна.
@@ -2181,9 +2197,9 @@ namespace DxfExporter
                 ScanResult addResult = await _processor.StartProcessingAsync(_cts.Token, 
                     callSource, choiceFiles);
 
-                if (addResult == null && CheckExit.UserClickCount > 1)
+                if (addResult == null)
                 {
-                    ShowAlert();
+                    if (CheckExit.UserClickCount > 1) ShowAlert();
                     return;
                 }
 
