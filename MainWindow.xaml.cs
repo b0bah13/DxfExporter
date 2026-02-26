@@ -629,7 +629,7 @@ namespace DxfExporter
                     _quoteTimer.Interval = TimeSpan.FromSeconds(5);
                     _quoteTimer.Tick += QuoteTimer_Tick;
                 }
-
+                
                 _quoteTimer.Start();
             }
             else
@@ -2394,9 +2394,20 @@ namespace DxfExporter
                 ShuffleQuotes();
 
             int quoteIndex = _shuffledIndexes[_currentIndex];
-            tb_quote.Text = _quotes[quoteIndex].Text;
+            string text = _quotes[quoteIndex].Text;
+            tb_quote.Text = text;
 
             _currentIndex++;
+
+            // Расчёт времени показа
+            // 25 символов - 1 секунда
+            double seconds = Math.Max(3.0, text.Length / 25.0);
+            seconds = Math.Round(seconds, 1);
+
+            if (_quoteTimer != null)
+            {
+                _quoteTimer.Interval = TimeSpan.FromSeconds(seconds);
+            }
         }
 
         /// <summary>

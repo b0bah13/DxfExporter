@@ -760,6 +760,8 @@ namespace DxfExporter.Scanning
                         return null;
                     }
 
+                    _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDataIpart, pDoc.DisplayName);
+
                     // пропускаем фантомную деталь
                     if (pDoc.ComponentDefinition.BOMStructure == BOMStructureEnum.kPhantomBOMStructure)
                     {
@@ -792,11 +794,9 @@ namespace DxfExporter.Scanning
 
                     string modName = pDoc.ModelStateName;
                     result.AddNode(ProcessPart(pDoc, modName));
-                    _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDataIpart, pDoc.DisplayName);
                     _mainWindow.MinusProgress(_percent);
                 }
-
-                _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessData);
+                
                 _mainWindow.UpdateOverlay(false);
                 _mainWindow.UpdateLog("====================\n", false);
             }
@@ -847,6 +847,11 @@ namespace DxfExporter.Scanning
             try
             {
                 bool wasOpened = false;
+
+                _percent = Math.Round(1.0 / (choiceFiles.Count + 1), 5);
+                _mainWindow.UpdateOverlay(true);
+                _mainWindow.UpdateOverlay(CommonConstants.AddDoc);
+
                 // Проходим по всем файлам, которые пользователь выбрал
                 foreach (string filePath in choiceFiles)
                 {
@@ -863,10 +868,13 @@ namespace DxfExporter.Scanning
                         return null;
                     }
 
+                    _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDataIpart, pDoc.DisplayName);
+
                     // пропускаем фантомную деталь
                     if (pDoc.ComponentDefinition.BOMStructure == BOMStructureEnum.kPhantomBOMStructure)
                     {
                         _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        _mainWindow.MinusProgress(_percent);
                         continue;
                     }
 
@@ -875,6 +883,7 @@ namespace DxfExporter.Scanning
                     {
                         pDoc.Close(SkipSave:true);
                         _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        _mainWindow.MinusProgress(_percent);
                         continue;
                     }
 
@@ -883,6 +892,7 @@ namespace DxfExporter.Scanning
                     {
                         pDoc.Close(SkipSave: true);
                         _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        _mainWindow.MinusProgress(_percent);
                         continue;
                     }
 
@@ -894,8 +904,10 @@ namespace DxfExporter.Scanning
 
                     string modName = pDoc.ModelStateName;
                     result.AddNode(ProcessPart(pDoc, modName));
+                    _mainWindow.MinusProgress(_percent);
                 }
 
+                _mainWindow.UpdateOverlay(false);
                 _mainWindow.UpdateLog("====================\n", false);
             }
             catch (Exception ex)
