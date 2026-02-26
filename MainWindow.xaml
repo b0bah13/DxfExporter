@@ -501,6 +501,17 @@
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
 
+                                                <DataGridTemplateColumn Header="Вид развёртки" Width="1.2*" IsReadOnly="True">
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <!-- TODO: При необходимости скорректировать размер превью (Width/Height) и отступы. -->
+                                                            <Border Width="96" Height="64" Background="White" BorderBrush="#FFD8D8D8" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                                <Image Source="{Binding FlatPatternThumbnail}" Stretch="Uniform"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
+
                                                 <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
@@ -581,6 +592,16 @@
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="0.58*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="0.5*"/>
+                                <DataGridTemplateColumn Header="Вид развёртки" Width="1.2*" IsReadOnly="True">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <!-- TODO: При необходимости скорректировать размер превью (Width/Height) и отступы. -->
+                                            <Border Width="96" Height="64" Background="White" BorderBrush="#FFD8D8D8" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <Image Source="{Binding FlatPatternThumbnail}" Stretch="Uniform"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True" >
                                     <DataGridTextColumn.ElementStyle>
