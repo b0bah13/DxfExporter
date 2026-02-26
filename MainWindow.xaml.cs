@@ -1719,7 +1719,12 @@ namespace DxfExporter
                     return;
                 }
                 // Перевод результатов сканирования в список для вывода
-                if (_scanResult == null) { return; }
+                if (_scanResult == null || _scanResult.ScannedData.Count == 0)
+                {
+                    MessageBox.Show("Нет подходящих файлов для выгрузки.", "Нет файлов", 
+                        MessageBoxButton.OK, MessageBoxImage.Stop);
+                    return;
+                }
 
                 txtStatus.Text = $"Сканирование завершено";
                 
@@ -1733,7 +1738,8 @@ namespace DxfExporter
 
                 // подсветить детали с ошибками
                 SelectDetails(FlattenForProcessing(_displayScanData));
-
+                
+                CheckExit.UserClickCount = 0;
             }
             catch (Exception ex)
             {
@@ -1849,6 +1855,12 @@ namespace DxfExporter
                     OverlayText.Text = CommonConstants.OverlayDxf;
                     txtStatus.Text = "Выгрузка Dxf...";
                     break;
+                case CallSource.AddOpen:
+                case CallSource.ChoiceInFolder:
+                    OverlayText.Text = CommonConstants.AddDoc;
+                    txtStatus.Text = "Добавление файлов...";
+
+                    break;
             }
             
             CheckExit.ClearData();
@@ -1865,7 +1877,7 @@ namespace DxfExporter
         {
             OverlayGrid.Visibility = Visibility.Collapsed;
             OverlayText.Text = CommonConstants.OverlayScan;
-
+            
             OverlayProcessText.Visibility = Visibility.Collapsed;
             tb_quote.Visibility = Visibility.Collapsed;
 
@@ -1874,6 +1886,8 @@ namespace DxfExporter
                 txtStatus.Text = source switch
                 {
                     CallSource.Scan => "Готов к выгрузке dxf",
+                    CallSource.ChoiceInFolder => "Готов к выгрузке dxf",
+                    CallSource.AddOpen => "Готов к выгрузке dxf",
                     CallSource.Export => "Готов к сканированию",
                     _ => txtStatus.Text
                 };
@@ -2134,7 +2148,8 @@ namespace DxfExporter
             string errText = "Ошибка при добавлении файлов";
             try
             {
-                CheckExit.ClearData();
+                // Подготовка перед сканированием
+                PreparationProcess(callSource);
 
                 // Дать UI возможность обновить интерфейс
                 await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Render);
@@ -2166,8 +2181,18 @@ namespace DxfExporter
                 ScanResult addResult = await _processor.StartProcessingAsync(_cts.Token, 
                     callSource, choiceFiles);
 
-                if (CheckExit.UserClickCount > 1)
+                if (addResult == null && CheckExit.UserClickCount > 1)
+                {
                     ShowAlert();
+                    return;
+                }
+
+                if (addResult.ScannedData.Count == 0)
+                {
+                    MessageBox.Show("Нет подходящих файлов для выгрузки.", "Нет файлов",
+                        MessageBoxButton.OK, MessageBoxImage.Stop);
+                    return;
+                }
 
                 if (CheckExit.NeedExit)
                 {
@@ -2198,6 +2223,7 @@ namespace DxfExporter
                 // подсветить детали с ошибками
                 SelectDetails(FlattenForProcessing(_displayScanData));
 
+                CheckExit.UserClickCount = 0;
                 txtStatus.Text = "Готов к выгрузке dxf";
             }
             catch (Exception ex)
@@ -2214,7 +2240,7 @@ namespace DxfExporter
             }
             finally
             {
-                
+                AfterProcess(callSource);
             }
         }
         

@@ -4,6 +4,7 @@
     {
         public const string OverlayCheckFile = "Пожалуйста, подождите\r\nИдёт проверка файла";
         public const string OverlayScan = "Пожалуйста, подождите\r\nСборка сканируется";
+        public const string AddDoc = "Пожалуйста, подождите\r\nДобавляются файлы";
         public const string OverlayProcessScan = "Сканируется деталь:";
         public const string OverlayProcessScanAsm = "Сканируется сборка:";
         public const string OverlayProcessData = "Пожалуйста, подождите\r\nЗаполняется таблица";

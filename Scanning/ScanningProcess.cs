@@ -88,7 +88,7 @@ namespace DxfExporter.Scanning
                     });
                     return null;
                 }
-
+                
                 return result;
             });
         }
@@ -131,6 +131,10 @@ namespace DxfExporter.Scanning
                         _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessScan,doc.DisplayName);
                         
                         modName = doc.ModelStateName;
+
+                        if (((PartDocument)doc).ComponentDefinition.BOMStructure ==
+                            BOMStructureEnum.kPhantomBOMStructure) return null;
+
                         result.AddNode(ProcessPart((PartDocument)doc, modName));
                         break;
                     //обработка сборки
@@ -357,7 +361,6 @@ namespace DxfExporter.Scanning
                     // пропускает исключенные или подавленные элементы
                     if (componentOccurrence.Suppressed || componentOccurrence.Excluded)
                     {
-                        
                         _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
                         _mainWindow.MinusProgress(_percent);
                         continue; 
@@ -409,6 +412,14 @@ namespace DxfExporter.Scanning
                     }
                     else if (componentOccurrence.DefinitionDocumentType == DocumentTypeEnum.kPartDocumentObject)
                     {
+                        // пропустить фантомные детали
+                        if (componentOccurrence.BOMStructure is BOMStructureEnum.kPhantomBOMStructure)
+                        {
+                            _mainWindow.UpdateLog($"Пропущена деталь: {nameOcc}");
+                            _mainWindow.MinusProgress(_percent);
+                            continue;
+                        }
+
                         PartDocument pDoc = (PartDocument)componentOccurrence.Definition.Document;
                         // пропускаем многотельную деталь
                         if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1)
@@ -452,86 +463,9 @@ namespace DxfExporter.Scanning
                 {
 
                 }
-
             }
-
         }
-
-
-        /// <summary>
-        /// Рекурсивный обход всех компонентов сборки для анализа структуры и свойств.
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <param name="asmDocument">Документ сборки Inventor</param>
-        /// <param name="result">Результат сканирования для накопления данных</param>
-        private void TraverseOccurrences(CancellationToken cancellationToken, AssemblyDocument asmDocument,
-            ScanResult result, double quantity = 1)
-        {
-            HashSet<string> hashOcc = new HashSet<string>();
-
-            try
-            {
-                foreach (ComponentOccurrence componentOccurrence in asmDocument.ComponentDefinition.Occurrences)
-                {
-                    // Вызывает исключение, если приложение закрыли
-                    cancellationToken.ThrowIfCancellationRequested();
-                    // Выход, если приложение сигнализирует о завершении
-                    if (_mainWindow.CheckExit.NeedExit) return;
-                    
-                    // пропускает исключенные или подавленные элементы
-                    if (componentOccurrence.Suppressed || componentOccurrence.Excluded) { continue; }
-
-                    // пропустить стандартные изделия
-                    if (componentOccurrence.BOMStructure is BOMStructureEnum.kPurchasedBOMStructure) { continue; }
-
-                    // пропустить детали из Content center
-                    if (componentOccurrence.Definition is PartComponentDefinition def && def.IsContentMember) { continue; }
-                    
-                    // для обработки только 1 раз
-                    string fullDocName = componentOccurrence.ReferencedDocumentDescriptor.FullDocumentName;
-                    if (!hashOcc.Add(fullDocName)) { continue; }
-
-                    // проверяем сборка или деталь
-                    if (componentOccurrence.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject)
-                    {
-                        AssemblyDocument asmDoc = componentOccurrence.Definition.Document;
-                        // пропускаем сборку если в ней нет деталей
-                        if (asmDoc.ComponentDefinition.Occurrences.Count == 0) { continue; }
-
-                        _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessScanAsm, asmDoc.DisplayName);
-
-                        TraverseOccurrences(cancellationToken, asmDoc, result);
-
-                        //_mainWindow.MinusProgress(1 / _allCount);
-                    }
-                    else if (componentOccurrence.DefinitionDocumentType == DocumentTypeEnum.kPartDocumentObject)
-                    {
-                        PartDocument pDoc = (PartDocument)componentOccurrence.Definition.Document;
-                        // пропускаем многотельную деталь
-                        if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1) { continue; }
-
-                        // пропускаем не листовую деталь
-                        if (pDoc.SubType != SubType.ЛистоваяДеталь) { continue; }
-
-                        _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessScan, pDoc.DisplayName);
-                    }
-
-
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine(ex.StackTrace);
-            }
-            finally
-            {
-
-            }
-
-
-        }
-
-
+        
         /// <summary>
         /// Заполнение структуры детали
         /// </summary>
@@ -552,9 +486,15 @@ namespace DxfExporter.Scanning
             bool errorMatThick = false;
             if (CheckSettings.CheckGab)
             {
-                var check = CheckFlat(material, thick, sheetMetalCompDef);
-                isBigFlat = check.BigFlat;
-                errorMatThick = check.errMatThick;
+                string baseMat = (string)GetPropertyValue(partDoc.PropertySets, "Inventor User Defined Properties",
+                    "Основной материал", "N/A");
+
+                if (baseMat == "N/A" || baseMat.ToLower().Contains("лист"))
+                {
+                    var check = CheckFlat(material, thick, sheetMetalCompDef);
+                    isBigFlat = check.BigFlat;
+                    errorMatThick = check.errMatThick;
+                }
             }
 
             //Создание структуры
@@ -778,6 +718,18 @@ namespace DxfExporter.Scanning
 
             try
             {
+                // Получаем открыто ли что то
+                int docCount = _invApp.Documents.VisibleDocuments
+                    .Cast<_Document>()
+                    .Count();
+
+                if (docCount == 0)
+                {
+                    _mainWindow.CheckExit.UserClickCount++;
+                    _mainWindow.CheckExit.NeedExit = true;
+                    return null;
+                }
+
                 // Получаем количество видимых деталей сразу
                 int partsCount = _invApp.Documents.VisibleDocuments
                     .Cast<_Document>()
@@ -785,14 +737,17 @@ namespace DxfExporter.Scanning
                 
                 if (partsCount == 0)
                 {
-                    _mainWindow.CheckExit.UserClickCount ++;
                     return result;
                 }
+
+                _percent = Math.Round(1.0 / (partsCount + 1), 5);
+                _mainWindow.UpdateOverlay(true);
+                _mainWindow.UpdateOverlay(CommonConstants.AddDoc);
 
                 //проходим по всем открытым видимым документам
                 foreach (var pDoc in 
                          from _Document documentsVisibleDocument in _invApp.Documents.VisibleDocuments 
-                         where documentsVisibleDocument.DocumentType == DocumentTypeEnum.kPartDocumentObject 
+                         where documentsVisibleDocument.DocumentType == DocumentTypeEnum.kPartDocumentObject
                          select (PartDocument)documentsVisibleDocument)
                 {
                     // Вызывает исключение, если приложение закрыли
@@ -805,10 +760,19 @@ namespace DxfExporter.Scanning
                         return null;
                     }
 
+                    // пропускаем фантомную деталь
+                    if (pDoc.ComponentDefinition.BOMStructure == BOMStructureEnum.kPhantomBOMStructure)
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        _mainWindow.MinusProgress(_percent);
+                        continue;
+                    }
+
                     // пропускаем многотельную деталь
                     if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1)
                     {
                         _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        _mainWindow.MinusProgress(_percent);
                         continue;
                     }
 
@@ -816,6 +780,7 @@ namespace DxfExporter.Scanning
                     if (pDoc.SubType != SubType.ЛистоваяДеталь)
                     {
                         _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        _mainWindow.MinusProgress(_percent);
                         continue;
                     }
 
@@ -827,8 +792,12 @@ namespace DxfExporter.Scanning
 
                     string modName = pDoc.ModelStateName;
                     result.AddNode(ProcessPart(pDoc, modName));
+                    _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDataIpart, pDoc.DisplayName);
+                    _mainWindow.MinusProgress(_percent);
                 }
 
+                _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessData);
+                _mainWindow.UpdateOverlay(false);
                 _mainWindow.UpdateLog("====================\n", false);
             }
             catch (Exception ex)
@@ -893,7 +862,14 @@ namespace DxfExporter.Scanning
                         _mainWindow.UpdateLog(_mainWindow.CheckExit.Message, false);
                         return null;
                     }
-                    
+
+                    // пропускаем фантомную деталь
+                    if (pDoc.ComponentDefinition.BOMStructure == BOMStructureEnum.kPhantomBOMStructure)
+                    {
+                        _mainWindow.UpdateLog($"Пропущена деталь: {pDoc.DisplayName}");
+                        continue;
+                    }
+
                     // пропускаем многотельную деталь
                     if (pDoc.ComponentDefinition.SurfaceBodies.Count > 1)
                     {
