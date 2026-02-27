@@ -223,6 +223,12 @@
                 <Setter.Value>
                     <Style TargetType="{x:Type DataGridRow}">
                         <Setter Property="Background" Value="{Binding RowColor}"/>
+                        <!--
+                            Минимальная высота строки нужна, чтобы миниатюра развёртки не "схлопывалась"
+                            и реально была видна в ячейке.
+                            TODO: при необходимости скорректировать под итоговый размер миниатюры.
+                        -->
+                        <Setter Property="MinHeight" Value="72"/>
                         <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
                     </Style>
                 </Setter.Value>
@@ -459,6 +465,11 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
                                     <Setter Property="Background" Value="{Binding RowColor}" />
+                                    <!--
+                                        Минимальная высота строки под столбец "Вид развёртки".
+                                        TODO: при изменении размеров миниатюры скорректировать значение.
+                                    -->
+                                    <Setter Property="MinHeight" Value="72"/>
                                     <EventSetter Event="PreviewMouseLeftButtonDown" Handler="DataGridRow_PreviewMouseLeftButtonDown"/>
                                     <Setter Property="DetailsVisibility" Value="Collapsed"/>
                                     <Style.Triggers>
@@ -520,7 +531,7 @@
                                                     <!-- TODO: При необходимости скорректировать размеры миниатюры под плотность таблицы. -->
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <Border Width="96" Height="62" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
+                                                            <Border Width="116" Height="72" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
                                                                 <Image Source="{Binding FlatPatternPreview}" Stretch="Uniform"/>
                                                             </Border>
                                                         </DataTemplate>
@@ -610,7 +621,7 @@
                                     <!-- TODO: При необходимости скорректировать размеры миниатюры под плотность таблицы. -->
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Width="96" Height="62" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
+                                            <Border Width="116" Height="72" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
                                                 <Image Source="{Binding FlatPatternPreview}" Stretch="Uniform"/>
                                             </Border>
                                         </DataTemplate>
