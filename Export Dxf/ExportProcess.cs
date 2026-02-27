@@ -2,15 +2,18 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Printing.IndexedProperties;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using System.Windows.Media.Imaging;
 using System.Windows.Media;
@@ -116,6 +119,9 @@ namespace DxfExporter.Export_Dxf
         //для ограничения отправки писем
         private static DateTime _lastErrorEmailSent = DateTime.MinValue;
         private static readonly TimeSpan _emailCooldown = TimeSpan.FromMinutes(5);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
 
         public ExportProcess(MainWindow mainWindow)
         {
@@ -489,15 +495,37 @@ namespace DxfExporter.Export_Dxf
 
                 try
                 {
-                    using var fs = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read);
-                    var image = new BitmapImage();
-                    image.BeginInit();
-                    image.CacheOption = BitmapCacheOption.OnLoad;
-                    image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-                    image.StreamSource = fs;
-                    image.EndInit();
-                    image.Freeze();
-                    return image;
+                    // Иногда Inventor завершает запись bitmap не мгновенно — даём несколько коротких попыток.
+                    // TODO: при необходимости скорректировать число попыток/задержку под конкретные рабочие станции.
+                    const int maxAttempts = 5;
+                    for (int attempt = 1; attempt <= maxAttempts; attempt++)
+                    {
+                        if (File.Exists(tempPath) && new FileInfo(tempPath).Length > 0)
+                        {
+                            break;
+                        }
+
+                        Thread.Sleep(40);
+                    }
+
+                    using var bitmap = new Bitmap(tempPath);
+                    IntPtr hBitmap = bitmap.GetHbitmap();
+
+                    try
+                    {
+                        BitmapSource bitmapSource = Imaging.CreateBitmapSourceFromHBitmap(
+                            hBitmap,
+                            IntPtr.Zero,
+                            Int32Rect.Empty,
+                            BitmapSizeOptions.FromEmptyOptions());
+
+                        bitmapSource.Freeze();
+                        return bitmapSource;
+                    }
+                    finally
+                    {
+                        DeleteObject(hBitmap);
+                    }
                 }
                 finally
                 {
