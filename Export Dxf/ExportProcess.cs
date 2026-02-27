@@ -12,6 +12,8 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using System.Windows.Media.Imaging;
+using System.Windows.Media;
 using System.Xml.Linq;
 using DxfExporter.Constants;
 using DxfExporter.MaskProcess;
@@ -91,6 +93,11 @@ namespace DxfExporter.Export_Dxf
     {
         private readonly MainWindow _mainWindow;
         private double _percent;
+
+        // TODO: при необходимости скорректировать размер миниатюры, если изменится плотность таблицы.
+        private const int FlatPreviewWidthPx = 220;
+        // TODO: при необходимости скорректировать высоту миниатюры под требуемую читаемость.
+        private const int FlatPreviewHeightPx = 140;
 
         /// <summary>
         /// Словарь для сопоставления маски и данных сканирования
@@ -245,6 +252,9 @@ namespace DxfExporter.Export_Dxf
                         
                         //Выгрузить dxf
                         ExportDxf();
+
+                        // Формируем компактную миниатюру развёртки в памяти, чтобы не захламлять диск.
+                        fileStructure.FlatPatternPreview = BuildFlatPatternPreview(pDoc);
                         
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
@@ -441,6 +451,55 @@ namespace DxfExporter.Export_Dxf
             }
 
             return exportDir;
+        }
+
+
+        /// <summary>
+        /// Создаёт миниатюру активного вида с развёрткой и возвращает её как ImageSource.
+        /// Согласно API Inventor 2023 для сохранения снимка вида используется Camera.SaveAsBitmap.
+        /// </summary>
+        /// <param name="partDocument">Документ детали с активной развёрткой.</param>
+        private ImageSource BuildFlatPatternPreview(PartDocument partDocument)
+        {
+            try
+            {
+                // TODO: при необходимости скорректировать параметры захвата (цвет фона, fit, формат) под корпоративный стандарт.
+                // Документ уже открыт и активен в текущем Inventor-контексте выгрузки.
+                partDocument.Activate();
+                View view = partDocument.Parent.ActiveView;
+
+                view.Fit(true);
+                view.Update();
+
+                string tempPath = Path.Combine(Path.GetTempPath(), $"dxf-flat-preview-{Guid.NewGuid():N}.bmp");
+                view.Camera.SaveAsBitmap(tempPath, FlatPreviewWidthPx, FlatPreviewHeightPx);
+
+                try
+                {
+                    using var fs = new FileStream(tempPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    var image = new BitmapImage();
+                    image.BeginInit();
+                    image.CacheOption = BitmapCacheOption.OnLoad;
+                    image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                    image.StreamSource = fs;
+                    image.EndInit();
+                    image.Freeze();
+                    return image;
+                }
+                finally
+                {
+                    if (File.Exists(tempPath))
+                    {
+                        File.Delete(tempPath);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _mainWindow.UpdateLog($"Не удалось создать миниатюру развёртки: {partDocument.DisplayName}");
+                Debug.WriteLine(ex.StackTrace);
+                return null;
+            }
         }
 
 

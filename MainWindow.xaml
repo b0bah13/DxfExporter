@@ -516,6 +516,16 @@
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
+                                                <DataGridTemplateColumn Header="Вид развёртки" Width="0.9*" IsReadOnly="True">
+                                                    <!-- TODO: При необходимости скорректировать размеры миниатюры под плотность таблицы. -->
+                                                    <DataGridTemplateColumn.CellTemplate>
+                                                        <DataTemplate>
+                                                            <Border Width="96" Height="62" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
+                                                                <Image Source="{Binding FlatPatternPreview}" Stretch="Uniform"/>
+                                                            </Border>
+                                                        </DataTemplate>
+                                                    </DataGridTemplateColumn.CellTemplate>
+                                                </DataGridTemplateColumn>
                                             </DataGrid.Columns>
 
                                             <DataGrid.ContextMenu>
@@ -596,6 +606,16 @@
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
+                                <DataGridTemplateColumn Header="Вид развёртки" Width="0.9*" IsReadOnly="True">
+                                    <!-- TODO: При необходимости скорректировать размеры миниатюры под плотность таблицы. -->
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Border Width="96" Height="62" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
+                                                <Image Source="{Binding FlatPatternPreview}" Stretch="Uniform"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
                             </DataGrid.Columns>
 
                             <!-- Контекстное меню -->

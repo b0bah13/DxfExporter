@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 
 namespace DxfExporter.Scanning
 {
@@ -82,6 +83,12 @@ namespace DxfExporter.Scanning
         public string _status { get; set; } = string.Empty;
 
         /// <summary>
+        /// Миниатюра развёртки для отображения в таблице после выгрузки DXF.
+        /// Хранится в памяти, без сохранения на диск.
+        /// </summary>
+        private ImageSource _flatPatternPreview;
+
+        /// <summary>
         /// Нужна гравировка? 
         /// </summary>
         public bool NeedGrav { get; set; } = true;
@@ -154,6 +161,24 @@ namespace DxfExporter.Scanning
                     _status = value;
                     OnPropertyChanged(nameof(Status));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Миниатюра развёртки, отображаемая в столбце "Вид развёртки".
+        /// </summary>
+        public ImageSource FlatPatternPreview
+        {
+            get => _flatPatternPreview;
+            set
+            {
+                if (_flatPatternPreview == value)
+                {
+                    return;
+                }
+
+                _flatPatternPreview = value;
+                OnPropertyChanged(nameof(FlatPatternPreview));
             }
         }
 
