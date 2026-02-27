@@ -254,7 +254,9 @@ namespace DxfExporter.Export_Dxf
                         ExportDxf();
 
                         // Формируем компактную миниатюру развёртки в памяти, чтобы не захламлять диск.
-                        fileStructure.FlatPatternPreview = BuildFlatPatternPreview(pDoc);
+                        // Обновляем превью строго в UI-потоке, чтобы гарантировать корректное обновление DataGrid.
+                        var flatPreview = BuildFlatPatternPreview(pDoc, sheetMetalCompDef);
+                        _mainWindow.Dispatcher.Invoke(() => fileStructure.FlatPatternPreview = flatPreview);
                         
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
@@ -459,15 +461,26 @@ namespace DxfExporter.Export_Dxf
         /// Согласно API Inventor 2023 для сохранения снимка вида используется Camera.SaveAsBitmap.
         /// </summary>
         /// <param name="partDocument">Документ детали с активной развёрткой.</param>
-        private ImageSource BuildFlatPatternPreview(PartDocument partDocument)
+        private ImageSource BuildFlatPatternPreview(PartDocument partDocument, SheetMetalComponentDefinition sheetMetalCompDef)
         {
+            bool enteredFlatEdit = false;
+
             try
             {
+                if (!sheetMetalCompDef.HasFlatPattern || sheetMetalCompDef.FlatPattern == null)
+                {
+                    return null;
+                }
+
                 // TODO: при необходимости скорректировать параметры захвата (цвет фона, fit, формат) под корпоративный стандарт.
                 // Документ уже открыт и активен в текущем Inventor-контексте выгрузки.
                 partDocument.Activate();
-                View view = partDocument.Parent.ActiveView;
 
+                // Важно: нужен именно вид развёртки, поэтому явно входим в режим редактирования Flat Pattern.
+                sheetMetalCompDef.FlatPattern.Edit();
+                enteredFlatEdit = true;
+
+                View view = partDocument.Parent.ActiveView;
                 view.Fit(true);
                 view.Update();
 
@@ -496,11 +509,28 @@ namespace DxfExporter.Export_Dxf
             }
             catch (Exception ex)
             {
-                _mainWindow.UpdateLog($"Не удалось создать миниатюру развёртки: {partDocument.DisplayName}");
+                _mainWindow.UpdateLog($"Не удалось создать миниатюру развёртки: {partDocument.DisplayName}. Причина: {ex.Message}");
                 Debug.WriteLine(ex.StackTrace);
                 return null;
             }
+            finally
+            {
+                if (enteredFlatEdit)
+                {
+                    try
+                    {
+                        // Возвращаем документ в обычный режим после снимка.
+                        sheetMetalCompDef.FlatPattern.ExitEdit();
+                    }
+                    catch (Exception ex)
+                    {
+                        _mainWindow.UpdateLog($"Не удалось закрыть режим развёртки: {partDocument.DisplayName}. Причина: {ex.Message}");
+                        Debug.WriteLine(ex.StackTrace);
+                    }
+                }
+            }
         }
+
 
 
         /// <summary>
