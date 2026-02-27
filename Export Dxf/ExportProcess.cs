@@ -11,6 +11,8 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Xml.Linq;
 using DxfExporter.Constants;
@@ -246,6 +248,8 @@ namespace DxfExporter.Export_Dxf
                         //Выгрузить dxf
                         ExportDxf();
                         
+                        fileStructure.FlatPatternThumbnail = BuildFlatPatternThumbnail(sheetMetalCompDef);
+
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
                         _mainWindow.MinusProgress(_percent);
@@ -545,6 +549,68 @@ namespace DxfExporter.Export_Dxf
             }
 
             return drawingsDir;
+        }
+
+
+        /// <summary>
+        /// Создаёт компактную миниатюру развёртки для отображения в таблице после выгрузки DXF.
+        /// </summary>
+        /// <param name="sheetMetalCompDef">Компонент с активной развёрткой.</param>
+        /// <returns>Готовая миниатюра либо null, если построение невозможно.</returns>
+        private ImageSource BuildFlatPatternThumbnail(SheetMetalComponentDefinition sheetMetalCompDef)
+        {
+            try
+            {
+                if (!sheetMetalCompDef.HasFlatPattern || sheetMetalCompDef.FlatPattern == null)
+                {
+                    return null;
+                }
+
+                // TODO: При необходимости скорректировать итоговый размер превью и внутренние отступы.
+                const int imageWidth = 96;
+                const int imageHeight = 64;
+                const double padding = 6d;
+
+                // Размеры развёртки переводим в мм для человекочитаемой подписи.
+                double flatWidthMm = sheetMetalCompDef.FlatPattern.Width * 10d;
+                double flatHeightMm = sheetMetalCompDef.FlatPattern.Length * 10d;
+
+                if (flatWidthMm <= 0 || flatHeightMm <= 0)
+                {
+                    return null;
+                }
+
+                var visual = new DrawingVisual();
+                using (DrawingContext dc = visual.RenderOpen())
+                {
+                    dc.DrawRectangle(Brushes.White, null, new Rect(0, 0, imageWidth, imageHeight));
+
+                    double availableWidth = imageWidth - 2 * padding;
+                    double availableHeight = imageHeight - 2 * padding;
+                    double scale = Math.Min(availableWidth / flatWidthMm, availableHeight / flatHeightMm);
+
+                    double drawWidth = flatWidthMm * scale;
+                    double drawHeight = flatHeightMm * scale;
+                    double x = (imageWidth - drawWidth) / 2d;
+                    double y = (imageHeight - drawHeight) / 2d;
+
+                    var outlinePen = new Pen(Brushes.Black, 1);
+                    outlinePen.Freeze();
+
+                    dc.DrawRectangle(Brushes.WhiteSmoke, outlinePen, new Rect(x, y, drawWidth, drawHeight));
+                }
+
+                var bitmap = new RenderTargetBitmap(imageWidth, imageHeight, 96, 96, PixelFormats.Pbgra32);
+                bitmap.Render(visual);
+                bitmap.Freeze();
+
+                return bitmap;
+            }
+            catch
+            {
+                // Не блокируем выгрузку DXF из-за невозможности построить миниатюру.
+                return null;
+            }
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Drawing;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 
 namespace DxfExporter.Scanning
 {
@@ -14,6 +15,7 @@ namespace DxfExporter.Scanning
         /// </summary>
         private bool _needUnload = true;
         private bool _isExpanded = false;
+        private ImageSource _flatPatternThumbnail;
 
         /// <summary>
         /// Обозначение элемента.
@@ -54,6 +56,23 @@ namespace DxfExporter.Scanning
         /// Видимое имя детали
         /// </summary>
         public string DisplayName { get; set; }
+
+        /// <summary>
+        /// Миниатюра развёртки, которая заполняется после успешной выгрузки DXF.
+        /// Пока идёт только сканирование, значение остаётся пустым.
+        /// </summary>
+        public ImageSource FlatPatternThumbnail
+        {
+            get => _flatPatternThumbnail;
+            set
+            {
+                if (_flatPatternThumbnail != value)
+                {
+                    _flatPatternThumbnail = value;
+                    OnPropertyChanged(nameof(FlatPatternThumbnail));
+                }
+            }
+        }
 
         /// <summary>
         /// Признак строки-группы для параметрической детали/детали по состояниям.
