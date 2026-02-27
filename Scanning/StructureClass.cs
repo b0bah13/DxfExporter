@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel;
-using System.Drawing;
 using System.Runtime.CompilerServices;
 
 namespace DxfExporter.Scanning
@@ -80,6 +79,12 @@ namespace DxfExporter.Scanning
         /// Статус
         /// </summary>
         public string _status { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Путь к миниатюре развёртки (PNG), отображаемой в таблице после успешной выгрузки DXF.
+        /// До момента выгрузки остаётся пустым.
+        /// </summary>
+        public string _flatPatternThumbnailPath { get; set; } = string.Empty;
 
         /// <summary>
         /// Нужна гравировка? 
@@ -185,6 +190,22 @@ namespace DxfExporter.Scanning
                 {
                     _unloadProp = value;
                     OnPropertyChanged(nameof(UnloadProp));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Путь к миниатюре развёртки для UI.
+        /// </summary>
+        public string FlatPatternThumbnailPath
+        {
+            get => _flatPatternThumbnailPath;
+            set
+            {
+                if (_flatPatternThumbnailPath != value)
+                {
+                    _flatPatternThumbnailPath = value;
+                    OnPropertyChanged(nameof(FlatPatternThumbnailPath));
                 }
             }
         }
