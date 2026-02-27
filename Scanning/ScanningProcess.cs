@@ -623,7 +623,7 @@ namespace DxfExporter.Scanning
                         parentStructure.ChildMembers.Add(child);
 
                         //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
-                        if (subDoc != null && subDoc?.FullFileName != _scanDoc.FullFileName && wasOpened)
+                        if (subDoc != null && subDoc?.FullFileName != _scanDoc?.FullFileName && wasOpened)
                         {
                             CommonOperations.ReleaseObject(subDoc);
                             wasOpened = false;
