@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -21,7 +22,6 @@ using DxfExporter.Constants;
 using DxfExporter.MaskProcess;
 using DxfExporter.Scanning;
 using Inventor;
-using netDxf.Entities;
 using netDxf;
 using static System.Net.Mime.MediaTypeNames;
 using static DxfExporter.MainWindow;
@@ -510,108 +510,210 @@ namespace DxfExporter.Export_Dxf
 
         /// <summary>
         /// Собирает набор отрезков для отрисовки миниатюры DXF.
+        /// Реализация специально сделана через reflection, чтобы работать
+        /// на разных версиях netDxf, где коллекции/типы могут отличаться.
         /// </summary>
         private List<(double X1, double Y1, double X2, double Y2)> CollectSegmentsForPreview(DxfDocument doc)
         {
             var segments = new List<(double X1, double Y1, double X2, double Y2)>();
-
-            bool IsBendLayer(EntityObject entity)
-            {
-                string layer = entity.Layer?.Name ?? string.Empty;
-                return layer.Contains("BEND", StringComparison.OrdinalIgnoreCase);
-            }
-
             const int arcApproxSteps = 32;
 
-            foreach (var entity in doc.Entities)
+            foreach (object entity in EnumerateDxfEntities(doc))
             {
-                if (IsBendLayer(entity)) continue;
-
-                switch (entity)
+                if (entity == null || IsBendLayer(entity))
                 {
-                    case Line line:
-                        segments.Add((line.StartPoint.X, line.StartPoint.Y, line.EndPoint.X, line.EndPoint.Y));
-                        break;
+                    continue;
+                }
 
-                    case LwPolyline lw:
+                string typeName = entity.GetType().Name;
+
+                if (typeName.Equals("Line", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (TryGetPointXY(entity, "StartPoint", out double x1, out double y1) &&
+                        TryGetPointXY(entity, "EndPoint", out double x2, out double y2))
                     {
-                        var vertices = lw.Vertexes.ToList();
-                        for (int i = 0; i < vertices.Count - 1; i++)
-                        {
-                            segments.Add((vertices[i].Position.X, vertices[i].Position.Y,
-                                vertices[i + 1].Position.X, vertices[i + 1].Position.Y));
-                        }
-
-                        if (lw.IsClosed && vertices.Count > 1)
-                        {
-                            segments.Add((vertices[^1].Position.X, vertices[^1].Position.Y,
-                                vertices[0].Position.X, vertices[0].Position.Y));
-                        }
-
-                        break;
+                        segments.Add((x1, y1, x2, y2));
                     }
 
-                    case Polyline2D pl:
+                    continue;
+                }
+
+                if (typeName.Contains("Polyline", StringComparison.OrdinalIgnoreCase))
+                {
+                    var vertices = ReadVertexPoints(entity);
+                    for (int i = 0; i < vertices.Count - 1; i++)
                     {
-                        var vertices = pl.Vertexes.ToList();
-                        for (int i = 0; i < vertices.Count - 1; i++)
-                        {
-                            segments.Add((vertices[i].Position.X, vertices[i].Position.Y,
-                                vertices[i + 1].Position.X, vertices[i + 1].Position.Y));
-                        }
-
-                        if (pl.IsClosed && vertices.Count > 1)
-                        {
-                            segments.Add((vertices[^1].Position.X, vertices[^1].Position.Y,
-                                vertices[0].Position.X, vertices[0].Position.Y));
-                        }
-
-                        break;
+                        segments.Add((vertices[i].X, vertices[i].Y, vertices[i + 1].X, vertices[i + 1].Y));
                     }
 
-                    case Arc arc:
+                    bool isClosed = TryGetBool(entity, "IsClosed");
+                    if (isClosed && vertices.Count > 1)
                     {
-                        double start = DegreesToRadians(arc.StartAngle);
-                        double end = DegreesToRadians(arc.EndAngle);
+                        segments.Add((vertices[^1].X, vertices[^1].Y, vertices[0].X, vertices[0].Y));
+                    }
+
+                    continue;
+                }
+
+                if (typeName.Equals("Arc", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (TryGetPointXY(entity, "Center", out double cx, out double cy) &&
+                        TryGetDouble(entity, "Radius", out double r) &&
+                        TryGetDouble(entity, "StartAngle", out double startDeg) &&
+                        TryGetDouble(entity, "EndAngle", out double endDeg))
+                    {
+                        double start = DegreesToRadians(startDeg);
+                        double end = DegreesToRadians(endDeg);
                         if (end < start) end += Math.PI * 2.0;
 
-                        double prevX = arc.Center.X + arc.Radius * Math.Cos(start);
-                        double prevY = arc.Center.Y + arc.Radius * Math.Sin(start);
+                        double prevX = cx + r * Math.Cos(start);
+                        double prevY = cy + r * Math.Sin(start);
 
                         for (int i = 1; i <= arcApproxSteps; i++)
                         {
                             double t = start + (end - start) * i / arcApproxSteps;
-                            double nextX = arc.Center.X + arc.Radius * Math.Cos(t);
-                            double nextY = arc.Center.Y + arc.Radius * Math.Sin(t);
+                            double nextX = cx + r * Math.Cos(t);
+                            double nextY = cy + r * Math.Sin(t);
                             segments.Add((prevX, prevY, nextX, nextY));
                             prevX = nextX;
                             prevY = nextY;
                         }
-
-                        break;
                     }
 
-                    case Circle circle:
+                    continue;
+                }
+
+                if (typeName.Equals("Circle", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (TryGetPointXY(entity, "Center", out double cx, out double cy) &&
+                        TryGetDouble(entity, "Radius", out double r))
                     {
-                        double prevX = circle.Center.X + circle.Radius;
-                        double prevY = circle.Center.Y;
+                        double prevX = cx + r;
+                        double prevY = cy;
 
                         for (int i = 1; i <= arcApproxSteps; i++)
                         {
                             double t = Math.PI * 2.0 * i / arcApproxSteps;
-                            double x = circle.Center.X + circle.Radius * Math.Cos(t);
-                            double y = circle.Center.Y + circle.Radius * Math.Sin(t);
+                            double x = cx + r * Math.Cos(t);
+                            double y = cy + r * Math.Sin(t);
                             segments.Add((prevX, prevY, x, y));
                             prevX = x;
                             prevY = y;
                         }
-
-                        break;
                     }
                 }
             }
 
             return segments;
+        }
+
+        private IEnumerable<object> EnumerateDxfEntities(DxfDocument doc)
+        {
+            if (doc?.Entities == null)
+            {
+                yield break;
+            }
+
+            // В одних версиях netDxf Entities может быть перечислимым напрямую,
+            // в других — доступ к полному списку идёт через свойство All.
+            if (doc.Entities is IEnumerable directEnumerable)
+            {
+                foreach (var item in directEnumerable)
+                {
+                    if (item != null) yield return item;
+                }
+
+                yield break;
+            }
+
+            var allProp = doc.Entities.GetType().GetProperty("All");
+            if (allProp?.GetValue(doc.Entities) is IEnumerable allEnumerable)
+            {
+                foreach (var item in allEnumerable)
+                {
+                    if (item != null) yield return item;
+                }
+            }
+        }
+
+        private bool IsBendLayer(object entity)
+        {
+            var layerProp = entity.GetType().GetProperty("Layer");
+            object layerObj = layerProp?.GetValue(entity);
+            if (layerObj == null)
+            {
+                return false;
+            }
+
+            var nameProp = layerObj.GetType().GetProperty("Name");
+            string layerName = nameProp?.GetValue(layerObj)?.ToString() ?? string.Empty;
+            return layerName.Contains("BEND", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private List<(double X, double Y)> ReadVertexPoints(object polylineEntity)
+        {
+            var result = new List<(double X, double Y)>();
+            var vertexesProp = polylineEntity.GetType().GetProperty("Vertexes");
+            if (!(vertexesProp?.GetValue(polylineEntity) is IEnumerable vertices))
+            {
+                return result;
+            }
+
+            foreach (var vertex in vertices)
+            {
+                if (TryGetPointXY(vertex, "Position", out double x, out double y))
+                {
+                    result.Add((x, y));
+                }
+            }
+
+            return result;
+        }
+
+        private bool TryGetPointXY(object owner, string propertyName, out double x, out double y)
+        {
+            x = 0;
+            y = 0;
+
+            var prop = owner.GetType().GetProperty(propertyName);
+            object pointObj = prop?.GetValue(owner);
+            if (pointObj == null)
+            {
+                return false;
+            }
+
+            var type = pointObj.GetType();
+            var xProp = type.GetProperty("X");
+            var yProp = type.GetProperty("Y");
+            if (xProp == null || yProp == null)
+            {
+                return false;
+            }
+
+            x = Convert.ToDouble(xProp.GetValue(pointObj));
+            y = Convert.ToDouble(yProp.GetValue(pointObj));
+            return true;
+        }
+
+        private bool TryGetDouble(object owner, string propertyName, out double value)
+        {
+            value = 0;
+            var prop = owner.GetType().GetProperty(propertyName);
+            object raw = prop?.GetValue(owner);
+            if (raw == null)
+            {
+                return false;
+            }
+
+            value = Convert.ToDouble(raw);
+            return true;
+        }
+
+        private bool TryGetBool(object owner, string propertyName)
+        {
+            var prop = owner.GetType().GetProperty(propertyName);
+            object raw = prop?.GetValue(owner);
+            return raw != null && Convert.ToBoolean(raw);
         }
 
         /// <summary>
