@@ -616,7 +616,9 @@ namespace DxfExporter.Export_Dxf
 
             // В одних версиях netDxf Entities может быть перечислимым напрямую,
             // в других — доступ к полному списку идёт через свойство All.
-            if (doc.Entities is IEnumerable directEnumerable)
+            object entitiesObject = doc.Entities;
+            var directEnumerable = entitiesObject as IEnumerable;
+            if (directEnumerable != null)
             {
                 foreach (var item in directEnumerable)
                 {
