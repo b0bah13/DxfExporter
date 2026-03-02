@@ -25,6 +25,9 @@ using netDxf.Entities;
 using netDxf;
 using static System.Net.Mime.MediaTypeNames;
 using static DxfExporter.MainWindow;
+using IoFile = System.IO.File;
+using DrawingColor = System.Drawing.Color;
+using DrawingPen = System.Drawing.Pen;
 using Path = System.IO.Path;
 
 namespace DxfExporter.Export_Dxf
@@ -478,7 +481,7 @@ namespace DxfExporter.Export_Dxf
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(dxfPath) || !File.Exists(dxfPath))
+                if (string.IsNullOrWhiteSpace(dxfPath) || !IoFile.Exists(dxfPath))
                 {
                     return null;
                 }
@@ -518,80 +521,93 @@ namespace DxfExporter.Export_Dxf
                 return layer.Contains("BEND", StringComparison.OrdinalIgnoreCase);
             }
 
-            foreach (var line in doc.Lines)
-            {
-                if (IsBendLayer(line)) continue;
-                segments.Add((line.StartPoint.X, line.StartPoint.Y, line.EndPoint.X, line.EndPoint.Y));
-            }
-
-            foreach (var lw in doc.LwPolylines)
-            {
-                if (IsBendLayer(lw)) continue;
-                var v = lw.Vertexes;
-                for (int i = 0; i < v.Count - 1; i++)
-                {
-                    segments.Add((v[i].Position.X, v[i].Position.Y, v[i + 1].Position.X, v[i + 1].Position.Y));
-                }
-
-                if (lw.IsClosed && v.Count > 1)
-                {
-                    segments.Add((v[^1].Position.X, v[^1].Position.Y, v[0].Position.X, v[0].Position.Y));
-                }
-            }
-
-            foreach (var pl in doc.Polylines2D)
-            {
-                if (IsBendLayer(pl)) continue;
-                var v = pl.Vertexes;
-                for (int i = 0; i < v.Count - 1; i++)
-                {
-                    segments.Add((v[i].Position.X, v[i].Position.Y, v[i + 1].Position.X, v[i + 1].Position.Y));
-                }
-
-                if (pl.IsClosed && v.Count > 1)
-                {
-                    segments.Add((v[^1].Position.X, v[^1].Position.Y, v[0].Position.X, v[0].Position.Y));
-                }
-            }
-
             const int arcApproxSteps = 32;
 
-            foreach (var arc in doc.Arcs)
+            foreach (var entity in doc.Entities)
             {
-                if (IsBendLayer(arc)) continue;
+                if (IsBendLayer(entity)) continue;
 
-                double start = DegreesToRadians(arc.StartAngle);
-                double end = DegreesToRadians(arc.EndAngle);
-                if (end < start) end += Math.PI * 2.0;
-
-                var prev = (X: arc.Center.X + arc.Radius * Math.Cos(start),
-                            Y: arc.Center.Y + arc.Radius * Math.Sin(start));
-
-                for (int i = 1; i <= arcApproxSteps; i++)
+                switch (entity)
                 {
-                    double t = start + (end - start) * i / arcApproxSteps;
-                    var next = (X: arc.Center.X + arc.Radius * Math.Cos(t),
-                                Y: arc.Center.Y + arc.Radius * Math.Sin(t));
-                    segments.Add((prev.X, prev.Y, next.X, next.Y));
-                    prev = next;
-                }
-            }
+                    case Line line:
+                        segments.Add((line.StartPoint.X, line.StartPoint.Y, line.EndPoint.X, line.EndPoint.Y));
+                        break;
 
-            foreach (var circle in doc.Circles)
-            {
-                if (IsBendLayer(circle)) continue;
+                    case LwPolyline lw:
+                    {
+                        var vertices = lw.Vertexes.ToList();
+                        for (int i = 0; i < vertices.Count - 1; i++)
+                        {
+                            segments.Add((vertices[i].Position.X, vertices[i].Position.Y,
+                                vertices[i + 1].Position.X, vertices[i + 1].Position.Y));
+                        }
 
-                double prevX = circle.Center.X + circle.Radius;
-                double prevY = circle.Center.Y;
+                        if (lw.IsClosed && vertices.Count > 1)
+                        {
+                            segments.Add((vertices[^1].Position.X, vertices[^1].Position.Y,
+                                vertices[0].Position.X, vertices[0].Position.Y));
+                        }
 
-                for (int i = 1; i <= arcApproxSteps; i++)
-                {
-                    double t = Math.PI * 2.0 * i / arcApproxSteps;
-                    double x = circle.Center.X + circle.Radius * Math.Cos(t);
-                    double y = circle.Center.Y + circle.Radius * Math.Sin(t);
-                    segments.Add((prevX, prevY, x, y));
-                    prevX = x;
-                    prevY = y;
+                        break;
+                    }
+
+                    case Polyline2D pl:
+                    {
+                        var vertices = pl.Vertexes.ToList();
+                        for (int i = 0; i < vertices.Count - 1; i++)
+                        {
+                            segments.Add((vertices[i].Position.X, vertices[i].Position.Y,
+                                vertices[i + 1].Position.X, vertices[i + 1].Position.Y));
+                        }
+
+                        if (pl.IsClosed && vertices.Count > 1)
+                        {
+                            segments.Add((vertices[^1].Position.X, vertices[^1].Position.Y,
+                                vertices[0].Position.X, vertices[0].Position.Y));
+                        }
+
+                        break;
+                    }
+
+                    case Arc arc:
+                    {
+                        double start = DegreesToRadians(arc.StartAngle);
+                        double end = DegreesToRadians(arc.EndAngle);
+                        if (end < start) end += Math.PI * 2.0;
+
+                        double prevX = arc.Center.X + arc.Radius * Math.Cos(start);
+                        double prevY = arc.Center.Y + arc.Radius * Math.Sin(start);
+
+                        for (int i = 1; i <= arcApproxSteps; i++)
+                        {
+                            double t = start + (end - start) * i / arcApproxSteps;
+                            double nextX = arc.Center.X + arc.Radius * Math.Cos(t);
+                            double nextY = arc.Center.Y + arc.Radius * Math.Sin(t);
+                            segments.Add((prevX, prevY, nextX, nextY));
+                            prevX = nextX;
+                            prevY = nextY;
+                        }
+
+                        break;
+                    }
+
+                    case Circle circle:
+                    {
+                        double prevX = circle.Center.X + circle.Radius;
+                        double prevY = circle.Center.Y;
+
+                        for (int i = 1; i <= arcApproxSteps; i++)
+                        {
+                            double t = Math.PI * 2.0 * i / arcApproxSteps;
+                            double x = circle.Center.X + circle.Radius * Math.Cos(t);
+                            double y = circle.Center.Y + circle.Radius * Math.Sin(t);
+                            segments.Add((prevX, prevY, x, y));
+                            prevX = x;
+                            prevY = y;
+                        }
+
+                        break;
+                    }
                 }
             }
 
@@ -607,7 +623,7 @@ namespace DxfExporter.Export_Dxf
             using var g = Graphics.FromImage(bmp);
 
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-            g.Clear(Color.White);
+            g.Clear(DrawingColor.White);
 
             double minX = double.MaxValue, minY = double.MaxValue;
             double maxX = double.MinValue, maxY = double.MinValue;
@@ -630,7 +646,7 @@ namespace DxfExporter.Export_Dxf
             double dx = (width - srcW * scale) / 2.0;
             double dy = (height - srcH * scale) / 2.0;
 
-            using var pen = new Pen(Color.Black, 1.0f);
+            using var pen = new DrawingPen(DrawingColor.Black, 1.0f);
 
             foreach (var s in segments)
             {
