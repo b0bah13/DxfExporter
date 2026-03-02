@@ -9,7 +9,6 @@ using System.Printing.IndexedProperties;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -22,6 +21,8 @@ using DxfExporter.Constants;
 using DxfExporter.MaskProcess;
 using DxfExporter.Scanning;
 using Inventor;
+using netDxf.Entities;
+using netDxf;
 using static System.Net.Mime.MediaTypeNames;
 using static DxfExporter.MainWindow;
 using Path = System.IO.Path;
@@ -259,9 +260,10 @@ namespace DxfExporter.Export_Dxf
                         //Выгрузить dxf
                         ExportDxf();
 
-                        // Формируем компактную миниатюру развёртки в памяти, чтобы не захламлять диск.
-                        // Обновляем превью строго в UI-потоке, чтобы гарантировать корректное обновление DataGrid.
-                        var flatPreview = BuildFlatPatternPreview(pDoc, sheetMetalCompDef);
+                        // Формируем миниатюру по фактически выгруженному DXF (контур/геометрия),
+                        // а не по снимку 3D-вида камеры Inventor.
+                        string exportedDxfPath = Path.Combine(subDir, fileName);
+                        var flatPreview = BuildFlatPatternPreviewFromDxf(exportedDxfPath, fileStructure);
                         _mainWindow.Dispatcher.Invoke(() => fileStructure.FlatPatternPreview = flatPreview);
                         
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
@@ -466,98 +468,198 @@ namespace DxfExporter.Export_Dxf
         /// Создаёт миниатюру активного вида с развёрткой и возвращает её как ImageSource.
         /// Согласно API Inventor 2023 для сохранения снимка вида используется Camera.SaveAsBitmap.
         /// </summary>
-        /// <param name="partDocument">Документ детали с активной развёрткой.</param>
-        private ImageSource BuildFlatPatternPreview(PartDocument partDocument, SheetMetalComponentDefinition sheetMetalCompDef)
+        /// <summary>
+        /// Создаёт миниатюру на основе уже выгруженного DXF-файла.
+        /// Это даёт вид именно развёртки (контуры DXF), а не снимок камеры модели.
+        /// Линии гиба дополнительно скрываются в превью, чтобы изображение было похоже
+        /// на «миниатюру файла раскроя».
+        /// </summary>
+        private ImageSource BuildFlatPatternPreviewFromDxf(string dxfPath, StructureClass fileStructure)
         {
-            bool enteredFlatEdit = false;
-
             try
             {
-                if (!sheetMetalCompDef.HasFlatPattern || sheetMetalCompDef.FlatPattern == null)
+                if (string.IsNullOrWhiteSpace(dxfPath) || !File.Exists(dxfPath))
                 {
                     return null;
                 }
 
-                // TODO: при необходимости скорректировать параметры захвата (цвет фона, fit, формат) под корпоративный стандарт.
-                // Документ уже открыт и активен в текущем Inventor-контексте выгрузки.
-                partDocument.Activate();
-
-                // Важно: нужен именно вид развёртки, поэтому явно входим в режим редактирования Flat Pattern.
-                sheetMetalCompDef.FlatPattern.Edit();
-                enteredFlatEdit = true;
-
-                View view = partDocument.Parent.ActiveView;
-                view.Fit(true);
-                view.Update();
-
-                string tempPath = Path.Combine(Path.GetTempPath(), $"dxf-flat-preview-{Guid.NewGuid():N}.bmp");
-                view.Camera.SaveAsBitmap(tempPath, FlatPreviewWidthPx, FlatPreviewHeightPx);
-
-                try
+                DxfDocument doc = DxfDocument.Load(dxfPath);
+                if (doc == null)
                 {
-                    // Иногда Inventor завершает запись bitmap не мгновенно — даём несколько коротких попыток.
-                    // TODO: при необходимости скорректировать число попыток/задержку под конкретные рабочие станции.
-                    const int maxAttempts = 5;
-                    for (int attempt = 1; attempt <= maxAttempts; attempt++)
-                    {
-                        if (File.Exists(tempPath) && new FileInfo(tempPath).Length > 0)
-                        {
-                            break;
-                        }
-
-                        Thread.Sleep(40);
-                    }
-
-                    using var bitmap = new Bitmap(tempPath);
-                    IntPtr hBitmap = bitmap.GetHbitmap();
-
-                    try
-                    {
-                        BitmapSource bitmapSource = Imaging.CreateBitmapSourceFromHBitmap(
-                            hBitmap,
-                            IntPtr.Zero,
-                            Int32Rect.Empty,
-                            BitmapSizeOptions.FromEmptyOptions());
-
-                        bitmapSource.Freeze();
-                        return bitmapSource;
-                    }
-                    finally
-                    {
-                        DeleteObject(hBitmap);
-                    }
+                    return null;
                 }
-                finally
+
+                var segments = CollectSegmentsForPreview(doc);
+                if (segments.Count == 0)
                 {
-                    if (File.Exists(tempPath))
-                    {
-                        File.Delete(tempPath);
-                    }
+                    return null;
                 }
+
+                return RenderSegmentsToBitmapSource(segments, FlatPreviewWidthPx, FlatPreviewHeightPx);
             }
             catch (Exception ex)
             {
-                _mainWindow.UpdateLog($"Не удалось создать миниатюру развёртки: {partDocument.DisplayName}. Причина: {ex.Message}");
+                _mainWindow.UpdateLog($"Не удалось создать миниатюру из DXF: {fileStructure.DisplayName}. Причина: {ex.Message}");
                 Debug.WriteLine(ex.StackTrace);
                 return null;
             }
-            finally
+        }
+
+        /// <summary>
+        /// Собирает набор отрезков для отрисовки миниатюры DXF.
+        /// </summary>
+        private List<(double X1, double Y1, double X2, double Y2)> CollectSegmentsForPreview(DxfDocument doc)
+        {
+            var segments = new List<(double X1, double Y1, double X2, double Y2)>();
+
+            bool IsBendLayer(EntityObject entity)
             {
-                if (enteredFlatEdit)
+                string layer = entity.Layer?.Name ?? string.Empty;
+                return layer.Contains("BEND", StringComparison.OrdinalIgnoreCase);
+            }
+
+            foreach (var line in doc.Lines)
+            {
+                if (IsBendLayer(line)) continue;
+                segments.Add((line.StartPoint.X, line.StartPoint.Y, line.EndPoint.X, line.EndPoint.Y));
+            }
+
+            foreach (var lw in doc.LwPolylines)
+            {
+                if (IsBendLayer(lw)) continue;
+                var v = lw.Vertexes;
+                for (int i = 0; i < v.Count - 1; i++)
                 {
-                    try
-                    {
-                        // Возвращаем документ в обычный режим после снимка.
-                        sheetMetalCompDef.FlatPattern.ExitEdit();
-                    }
-                    catch (Exception ex)
-                    {
-                        _mainWindow.UpdateLog($"Не удалось закрыть режим развёртки: {partDocument.DisplayName}. Причина: {ex.Message}");
-                        Debug.WriteLine(ex.StackTrace);
-                    }
+                    segments.Add((v[i].Position.X, v[i].Position.Y, v[i + 1].Position.X, v[i + 1].Position.Y));
+                }
+
+                if (lw.IsClosed && v.Count > 1)
+                {
+                    segments.Add((v[^1].Position.X, v[^1].Position.Y, v[0].Position.X, v[0].Position.Y));
                 }
             }
+
+            foreach (var pl in doc.Polylines2D)
+            {
+                if (IsBendLayer(pl)) continue;
+                var v = pl.Vertexes;
+                for (int i = 0; i < v.Count - 1; i++)
+                {
+                    segments.Add((v[i].Position.X, v[i].Position.Y, v[i + 1].Position.X, v[i + 1].Position.Y));
+                }
+
+                if (pl.IsClosed && v.Count > 1)
+                {
+                    segments.Add((v[^1].Position.X, v[^1].Position.Y, v[0].Position.X, v[0].Position.Y));
+                }
+            }
+
+            const int arcApproxSteps = 32;
+
+            foreach (var arc in doc.Arcs)
+            {
+                if (IsBendLayer(arc)) continue;
+
+                double start = DegreesToRadians(arc.StartAngle);
+                double end = DegreesToRadians(arc.EndAngle);
+                if (end < start) end += Math.PI * 2.0;
+
+                var prev = (X: arc.Center.X + arc.Radius * Math.Cos(start),
+                            Y: arc.Center.Y + arc.Radius * Math.Sin(start));
+
+                for (int i = 1; i <= arcApproxSteps; i++)
+                {
+                    double t = start + (end - start) * i / arcApproxSteps;
+                    var next = (X: arc.Center.X + arc.Radius * Math.Cos(t),
+                                Y: arc.Center.Y + arc.Radius * Math.Sin(t));
+                    segments.Add((prev.X, prev.Y, next.X, next.Y));
+                    prev = next;
+                }
+            }
+
+            foreach (var circle in doc.Circles)
+            {
+                if (IsBendLayer(circle)) continue;
+
+                double prevX = circle.Center.X + circle.Radius;
+                double prevY = circle.Center.Y;
+
+                for (int i = 1; i <= arcApproxSteps; i++)
+                {
+                    double t = Math.PI * 2.0 * i / arcApproxSteps;
+                    double x = circle.Center.X + circle.Radius * Math.Cos(t);
+                    double y = circle.Center.Y + circle.Radius * Math.Sin(t);
+                    segments.Add((prevX, prevY, x, y));
+                    prevX = x;
+                    prevY = y;
+                }
+            }
+
+            return segments;
         }
+
+        /// <summary>
+        /// Рендерит набор DXF-сегментов в миниатюру WPF ImageSource.
+        /// </summary>
+        private ImageSource RenderSegmentsToBitmapSource(List<(double X1, double Y1, double X2, double Y2)> segments, int width, int height)
+        {
+            using var bmp = new Bitmap(width, height);
+            using var g = Graphics.FromImage(bmp);
+
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+            g.Clear(Color.White);
+
+            double minX = double.MaxValue, minY = double.MaxValue;
+            double maxX = double.MinValue, maxY = double.MinValue;
+
+            foreach (var s in segments)
+            {
+                minX = Math.Min(minX, Math.Min(s.X1, s.X2));
+                minY = Math.Min(minY, Math.Min(s.Y1, s.Y2));
+                maxX = Math.Max(maxX, Math.Max(s.X1, s.X2));
+                maxY = Math.Max(maxY, Math.Max(s.Y1, s.Y2));
+            }
+
+            double srcW = Math.Max(1e-6, maxX - minX);
+            double srcH = Math.Max(1e-6, maxY - minY);
+            double padding = 6.0; // TODO: при необходимости скорректировать поля миниатюры.
+            double sx = (width - 2 * padding) / srcW;
+            double sy = (height - 2 * padding) / srcH;
+            double scale = Math.Min(sx, sy);
+
+            double dx = (width - srcW * scale) / 2.0;
+            double dy = (height - srcH * scale) / 2.0;
+
+            using var pen = new Pen(Color.Black, 1.0f);
+
+            foreach (var s in segments)
+            {
+                float x1 = (float)(dx + (s.X1 - minX) * scale);
+                float y1 = (float)(height - (dy + (s.Y1 - minY) * scale));
+                float x2 = (float)(dx + (s.X2 - minX) * scale);
+                float y2 = (float)(height - (dy + (s.Y2 - minY) * scale));
+                g.DrawLine(pen, x1, y1, x2, y2);
+            }
+
+            IntPtr hBitmap = bmp.GetHbitmap();
+            try
+            {
+                BitmapSource bitmapSource = Imaging.CreateBitmapSourceFromHBitmap(
+                    hBitmap,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
+
+                bitmapSource.Freeze();
+                return bitmapSource;
+            }
+            finally
+            {
+                DeleteObject(hBitmap);
+            }
+        }
+
+        private static double DegreesToRadians(double degrees) => degrees * Math.PI / 180.0;
 
 
 
