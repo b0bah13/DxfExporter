@@ -169,6 +169,32 @@ namespace DxfExporter
         }
 
         /// <summary>
+        /// Возвращает PartDocument по полному пути: если открыт и видимый — берёт из Documents, иначе открывает.
+        /// </summary>
+        /// <param name="invApp">Экземпляр Inventor.Application.</param>
+        /// <param name="fullPath">Полный путь к файлу.</param>
+        /// <param name="wasOpened">True если документ был открыт этим методом.</param>
+        /// <returns>PartDocument или null.</returns>
+        public static PartDocument GetVisibleOrOpenPartDocument(Inventor.Application invApp, string fullPath, out bool wasOpened)
+        {
+            // Изначально считаем что не открывали
+            wasOpened = false;
+
+            // 1) Пытаемся найти документ среди уже открытых по FullFileName
+            foreach (var doc in from Document doc in invApp.Documents.VisibleDocuments
+                     where doc.DocumentType == DocumentTypeEnum.kPartDocumentObject
+                     where !string.IsNullOrWhiteSpace(doc.FullFileName)
+                     where string.Equals(doc.FullFileName, fullPath, StringComparison.OrdinalIgnoreCase)
+                     select doc)
+            {
+                return (PartDocument)doc;
+            }
+
+            // 2) Не нашли — открываем
+            return NeedOpenedFile(invApp, fullPath, out wasOpened);
+        }
+
+        /// <summary>
         /// Функция для открытия файла
         /// </summary>
         /// <param name="invApp"></param>

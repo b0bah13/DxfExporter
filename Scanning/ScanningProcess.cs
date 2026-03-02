@@ -639,10 +639,14 @@ namespace DxfExporter.Scanning
             finally
             {
                 //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
-                if (pDoc != null && pDoc?.FullFileName != _scanDoc.FullFileName && wasOpened)
+                if (_scanDoc != null)
                 {
-                    CommonOperations.ReleaseObject(pDoc);
+                    if (pDoc != null && pDoc?.FullFileName != _scanDoc.FullFileName && wasOpened)
+                    {
+                        CommonOperations.ReleaseObject(pDoc);
+                    }
                 }
+                
                 _invApp.SilentOperation = false;
             }
         }

@@ -15,11 +15,11 @@
         mc:Ignorable="d"
         AllowsTransparency="False"
         Title="DXF Exporter"
-        Width="980" Height="660"
+        Width="1040" Height="700"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         Background="White" 
-        Icon="/dxf-file.ico" Cursor="" MinWidth="980" MinHeight="660">
+        Icon="/dxf-file.ico" Cursor="" MinWidth="1040" MinHeight="700">
 
     <Window.Resources>
         <!-- Серый цвет при IsUsed = true -->
@@ -209,7 +209,7 @@
             <Setter Property="BorderBrush" Value="#FFD0D8EE"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="HorizontalAlignment" Value="Stretch"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="GridLinesVisibility" Value="All"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
             <!--Ограничиваем высоту вложенной таблицы: при большом количестве строк
@@ -465,8 +465,7 @@
                             <DataGrid.RowStyle>
                                 <Style TargetType="{x:Type DataGridRow}">
                                     <Setter Property="Background" Value="{Binding RowColor}" />
-                                    <!--
-                                        Минимальная высота строки под столбец "Вид развёртки".
+                                    <!--Минимальная высота строки под столбец "Вид развёртки".
                                         TODO: при изменении размеров миниатюры скорректировать значение.
                                     -->
                                     <Setter Property="MinHeight" Value="72"/>
@@ -484,6 +483,14 @@
                                 </Style>
                             </DataGrid.RowStyle>
 
+                            <DataGrid.Resources>
+                                <!-- Стиль для текста внутри ячеек -->
+                                <Style x:Key="CenteredCellText" TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <!-- <Setter Property="TextAlignment" Value="Center" /> если нужно по горизонтали тоже -->
+                                </Style>
+                            </DataGrid.Resources>
+
                             <DataGrid.RowDetailsTemplate>
                                 <DataTemplate>
                                     <!-- TODO: Здесь можно скорректировать отступ вложенной таблицы относительно кнопки раскрытия. -->
@@ -493,7 +500,7 @@
                                                   Style="{StaticResource NestedScanDataGridStyle}"
                                                   ContextMenuOpening="scanData_ContextMenuOpening">
                                             <DataGrid.Columns>
-                                                <DataGridTemplateColumn Header="Выгрузить" Width="0.66*">
+                                                <DataGridTemplateColumn Header="Выгрузить" Width="0.68*">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
                                                             <CheckBox IsChecked="{Binding NeedUnload, UpdateSourceTrigger=PropertyChanged}"
@@ -502,11 +509,18 @@
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
-                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*" IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*" IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
-                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" Width="0.58*" IsReadOnly="True"/>
-                                                
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" 
+                                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                                    Width="2.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" 
+                                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                                    Width="1.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" 
+                                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                                    Width="0.8*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" 
+                                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                                    Width="0.62*" IsReadOnly="True"/>
                                                 <DataGridTemplateColumn Header="{x:Static const:HeaderConst.Количество}" Width="0.5*">
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
@@ -514,25 +528,27 @@
                                                                      dxfExporter:NumericTextBoxBehavior.InputMode="Integer"
                                                                      BorderThickness="0"
                                                                      Background="Transparent"
-                                                                     Padding="0"/>
+                                                                     Padding="0" VerticalAlignment="Center"/>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
                                                 </DataGridTemplateColumn>
-
-                                                <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
+                                                <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" 
+                                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                                    Width="1.18*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True">
                                                     <DataGridTextColumn.ElementStyle>
                                                         <Style TargetType="{x:Type TextBlock}">
                                                             <Setter Property="TextWrapping" Value="Wrap" />
+                                                            <Setter Property="VerticalAlignment" Value="Center" />
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                 </DataGridTextColumn>
-                                                <DataGridTemplateColumn Header="Вид развёртки" Width="0.9*" IsReadOnly="True">
+                                                <DataGridTemplateColumn Header="Развёртка" Width="0.9*" IsReadOnly="True">
                                                     <!-- TODO: При необходимости скорректировать размеры миниатюры под плотность таблицы. -->
                                                     <DataGridTemplateColumn.CellTemplate>
                                                         <DataTemplate>
-                                                            <Border Width="116" Height="72" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
-                                                                <Image Source="{Binding FlatPatternPreview}" Stretch="Uniform"/>
+                                                            <Border BorderThickness="1" CornerRadius="2">
+                                                                <Image Source="{Binding FlatPatternPreview}"/>
                                                             </Border>
                                                         </DataTemplate>
                                                     </DataGridTemplateColumn.CellTemplate>
@@ -560,7 +576,7 @@
                             </DataGrid.RowDetailsTemplate>
 
                             <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="Выгрузить" Width="0.66*">
+                                <DataGridTemplateColumn Header="Выгрузить" Width="0.68*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <Grid>
@@ -603,26 +619,40 @@
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
-
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" Width="2.8*"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" Width="1.8*"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" Width="0.8*" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" Width="0.58*"/>
-                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" Width="0.5*"/>
-                                <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" Width="1.15*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}"
+                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                    Width="2.8*"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" 
+                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                    Width="1.8*"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" 
+                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                    Width="0.8*" IsReadOnly="True"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Толщина}" Binding="{Binding Thickness}" 
+                                                    EditingElementStyle="{StaticResource DecimalEditingTextBoxStyle}" 
+                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                    Width="0.62*"/>
+                                <DataGridTextColumn Header="{x:Static const:HeaderConst.Количество}" Binding="{Binding Quantity, UpdateSourceTrigger=PropertyChanged}" 
+                                                    EditingElementStyle="{StaticResource IntegerEditingTextBoxStyle}" 
+                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                    Width="0.5*"/>
+                                <DataGridTextColumn Header="Свойства выгрузки" Binding="{Binding UnloadProp}" 
+                                                    ElementStyle="{StaticResource CenteredCellText}"
+                                                    Width="1.18*" IsReadOnly="True"/>
                                 <DataGridTextColumn Header="Статус" Binding="{Binding Status}" Width="*" IsReadOnly="True" >
                                     <DataGridTextColumn.ElementStyle>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Setter Property="TextWrapping" Value="Wrap" />
+                                            <Setter Property="VerticalAlignment" Value="Center" />
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
-                                <DataGridTemplateColumn Header="Вид развёртки" Width="0.9*" IsReadOnly="True">
+                                <DataGridTemplateColumn Header="Развёртка" Width="0.9*" IsReadOnly="True">
                                     <!-- TODO: При необходимости скорректировать размеры миниатюры под плотность таблицы. -->
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
-                                            <Border Width="116" Height="72" BorderBrush="#FFD4D9EA" BorderThickness="1" CornerRadius="2" Background="#FFF9FAFD">
-                                                <Image Source="{Binding FlatPatternPreview}" Stretch="Uniform"/>
+                                            <Border BorderThickness="1" CornerRadius="2">
+                                                <Image Source="{Binding FlatPatternPreview}"/>
                                             </Border>
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>

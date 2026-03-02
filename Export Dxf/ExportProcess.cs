@@ -102,8 +102,7 @@ namespace DxfExporter.Export_Dxf
         private double _percent;
 
         // TODO: при необходимости скорректировать размер миниатюры, если изменится плотность таблицы.
-        private const int FlatPreviewWidthPx = 220;
-        // TODO: при необходимости скорректировать высоту миниатюры под требуемую читаемость.
+        private const int FlatPreviewWidthPx = 200;
         private const int FlatPreviewHeightPx = 140;
 
         /// <summary>
@@ -225,9 +224,10 @@ namespace DxfExporter.Export_Dxf
                         if (fileStructure.IsModelStatePart)
                         {
                             ctx.InvApp.SilentOperation = true;
-                            pDoc = CommonOperations.NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
+                            //pDoc = CommonOperations.NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
+                            pDoc = CommonOperations.GetVisibleOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
                             sheetMetalCompDef = (SheetMetalComponentDefinition)pDoc.ComponentDefinition;
-
+                            
                             foreach (var modelState in sheetMetalCompDef.ModelStates.Cast<ModelState>()
                                          .Where(modelState => modelState.Name == fileStructure.MemberName))
                             {
@@ -733,7 +733,7 @@ namespace DxfExporter.Export_Dxf
             using var g = Graphics.FromImage(bmp);
 
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-            g.Clear(DrawingColor.White);
+            g.Clear(DrawingColor.White);//Transparent - прозрачный
 
             double minX = double.MaxValue, minY = double.MaxValue;
             double maxX = double.MinValue, maxY = double.MinValue;
@@ -748,7 +748,7 @@ namespace DxfExporter.Export_Dxf
 
             double srcW = Math.Max(1e-6, maxX - minX);
             double srcH = Math.Max(1e-6, maxY - minY);
-            double padding = 6.0; // TODO: при необходимости скорректировать поля миниатюры.
+            double padding = 4.0; // TODO: при необходимости скорректировать поля миниатюры.
             double sx = (width - 2 * padding) / srcW;
             double sy = (height - 2 * padding) / srcH;
             double scale = Math.Min(sx, sy);
@@ -757,7 +757,7 @@ namespace DxfExporter.Export_Dxf
             double dy = (height - srcH * scale) / 2.0;
 
             using var mainPen = new DrawingPen(DrawingColor.Black, 1.0f);
-            using var accentPen = new DrawingPen(DrawingColor.FromArgb(255, 219, 0), 1.0f);
+            using var accentPen = new DrawingPen(DrawingColor.Yellow, 1.0f); // FromArgb(255, 255, 0)
 
             foreach (var s in segments)
             {

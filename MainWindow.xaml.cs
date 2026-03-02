@@ -160,7 +160,19 @@ namespace DxfExporter
         }
 
         #endregion
-        
+
+        #region Для фокуса Inventor
+        // P/Invoke
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_RESTORE = 9;
+        #endregion
+
         public MainWindow()
         {
             InitializeComponent();
@@ -348,12 +360,12 @@ namespace DxfExporter
         /// <summary>
         /// Минимальная ширина окна в пикселях.
         /// </summary>
-        private const int MinWindowWidthPx = 980;
+        private const int MinWindowWidthPx = 1040;
 
         /// <summary>
         /// Минимальная высота окна в пикселях.
         /// </summary>
-        private const int MinWindowHeightPx = 660;
+        private const int MinWindowHeightPx = 700;
 
         /// <summary>
         /// Флаг получения ближайшего монитора для заданного окна.
@@ -2331,6 +2343,24 @@ namespace DxfExporter
                     // Активируем последний документ
                     lastDoc?.Activate();
                     invApp.Visible = true;
+
+                    // Принудительно выводим окно на передний план
+                    try
+                    {
+                        // Получаем главное окно Inventor
+                        IntPtr hWnd = new IntPtr(invApp.MainFrameHWND);
+
+                        // Восстанавливаем, если было свёрнуто
+                        //ShowWindow(hWnd, SW_RESTORE);
+
+                        // Даём фокус и поднимаем наверх
+                        SetForegroundWindow(hWnd);
+                    }
+                    catch (Exception exWnd)
+                    {
+                        // Если по каким-то причинам не получилось — не падаем
+                        Debug.WriteLine("Не удалось установить фокус: " + exWnd.Message);
+                    }
                 });
             }
             catch (Exception ex)
@@ -3366,6 +3396,9 @@ namespace DxfExporter
                         break;
                     case "1.0.2.0":
                         StartTour(13);
+                        break;
+                    case "1.0.3.0":
+                        //В этой версии ничего не показываем
                         break;
                 }
             }
