@@ -513,18 +513,19 @@ namespace DxfExporter.Export_Dxf
         /// Реализация специально сделана через reflection, чтобы работать
         /// на разных версиях netDxf, где коллекции/типы могут отличаться.
         /// </summary>
-        private List<(double X1, double Y1, double X2, double Y2)> CollectSegmentsForPreview(DxfDocument doc)
+        private List<(double X1, double Y1, double X2, double Y2, bool IsAccent)> CollectSegmentsForPreview(DxfDocument doc)
         {
-            var segments = new List<(double X1, double Y1, double X2, double Y2)>();
+            var segments = new List<(double X1, double Y1, double X2, double Y2, bool IsAccent)>();
             const int arcApproxSteps = 32;
 
             foreach (object entity in EnumerateDxfEntities(doc))
             {
-                if (entity == null || IsBendLayer(entity))
+                if (entity == null)
                 {
                     continue;
                 }
 
+                bool isAccent = IsAccentLayer(entity);
                 string typeName = entity.GetType().Name;
 
                 if (typeName.Equals("Line", StringComparison.OrdinalIgnoreCase))
@@ -532,7 +533,7 @@ namespace DxfExporter.Export_Dxf
                     if (TryGetPointXY(entity, "StartPoint", out double x1, out double y1) &&
                         TryGetPointXY(entity, "EndPoint", out double x2, out double y2))
                     {
-                        segments.Add((x1, y1, x2, y2));
+                        segments.Add((x1, y1, x2, y2, isAccent));
                     }
 
                     continue;
@@ -543,13 +544,13 @@ namespace DxfExporter.Export_Dxf
                     var vertices = ReadVertexPoints(entity);
                     for (int i = 0; i < vertices.Count - 1; i++)
                     {
-                        segments.Add((vertices[i].X, vertices[i].Y, vertices[i + 1].X, vertices[i + 1].Y));
+                        segments.Add((vertices[i].X, vertices[i].Y, vertices[i + 1].X, vertices[i + 1].Y, isAccent));
                     }
 
                     bool isClosed = TryGetBool(entity, "IsClosed");
                     if (isClosed && vertices.Count > 1)
                     {
-                        segments.Add((vertices[^1].X, vertices[^1].Y, vertices[0].X, vertices[0].Y));
+                        segments.Add((vertices[^1].X, vertices[^1].Y, vertices[0].X, vertices[0].Y, isAccent));
                     }
 
                     continue;
@@ -574,7 +575,7 @@ namespace DxfExporter.Export_Dxf
                             double t = start + (end - start) * i / arcApproxSteps;
                             double nextX = cx + r * Math.Cos(t);
                             double nextY = cy + r * Math.Sin(t);
-                            segments.Add((prevX, prevY, nextX, nextY));
+                            segments.Add((prevX, prevY, nextX, nextY, isAccent));
                             prevX = nextX;
                             prevY = nextY;
                         }
@@ -596,7 +597,7 @@ namespace DxfExporter.Export_Dxf
                             double t = Math.PI * 2.0 * i / arcApproxSteps;
                             double x = cx + r * Math.Cos(t);
                             double y = cy + r * Math.Sin(t);
-                            segments.Add((prevX, prevY, x, y));
+                            segments.Add((prevX, prevY, x, y, isAccent));
                             prevX = x;
                             prevY = y;
                         }
@@ -638,7 +639,7 @@ namespace DxfExporter.Export_Dxf
             }
         }
 
-        private bool IsBendLayer(object entity)
+        private bool IsAccentLayer(object entity)
         {
             var layerProp = entity.GetType().GetProperty("Layer");
             object layerObj = layerProp?.GetValue(entity);
@@ -649,7 +650,12 @@ namespace DxfExporter.Export_Dxf
 
             var nameProp = layerObj.GetType().GetProperty("Name");
             string layerName = nameProp?.GetValue(layerObj)?.ToString() ?? string.Empty;
-            return layerName.Contains("BEND", StringComparison.OrdinalIgnoreCase);
+
+            return layerName.Contains("BEND", StringComparison.OrdinalIgnoreCase) ||
+                   layerName.Contains("UNCONSUMED", StringComparison.OrdinalIgnoreCase) ||
+                   layerName.Contains("SKETCH", StringComparison.OrdinalIgnoreCase) ||
+                   layerName.Contains("ENGRAV", StringComparison.OrdinalIgnoreCase) ||
+                   layerName.Contains("ГРАВ", StringComparison.OrdinalIgnoreCase);
         }
 
         private List<(double X, double Y)> ReadVertexPoints(object polylineEntity)
@@ -721,7 +727,7 @@ namespace DxfExporter.Export_Dxf
         /// <summary>
         /// Рендерит набор DXF-сегментов в миниатюру WPF ImageSource.
         /// </summary>
-        private ImageSource RenderSegmentsToBitmapSource(List<(double X1, double Y1, double X2, double Y2)> segments, int width, int height)
+        private ImageSource RenderSegmentsToBitmapSource(List<(double X1, double Y1, double X2, double Y2, bool IsAccent)> segments, int width, int height)
         {
             using var bmp = new Bitmap(width, height);
             using var g = Graphics.FromImage(bmp);
@@ -750,7 +756,8 @@ namespace DxfExporter.Export_Dxf
             double dx = (width - srcW * scale) / 2.0;
             double dy = (height - srcH * scale) / 2.0;
 
-            using var pen = new DrawingPen(DrawingColor.Black, 1.0f);
+            using var mainPen = new DrawingPen(DrawingColor.Black, 1.0f);
+            using var accentPen = new DrawingPen(DrawingColor.FromArgb(255, 219, 0), 1.0f);
 
             foreach (var s in segments)
             {
@@ -758,7 +765,7 @@ namespace DxfExporter.Export_Dxf
                 float y1 = (float)(height - (dy + (s.Y1 - minY) * scale));
                 float x2 = (float)(dx + (s.X2 - minX) * scale);
                 float y2 = (float)(height - (dy + (s.Y2 - minY) * scale));
-                g.DrawLine(pen, x1, y1, x2, y2);
+                g.DrawLine(s.IsAccent ? accentPen : mainPen, x1, y1, x2, y2);
             }
 
             IntPtr hBitmap = bmp.GetHbitmap();
