@@ -266,6 +266,8 @@ namespace DxfExporter.Export_Dxf
                         // Формируем миниатюру по фактически выгруженному DXF (контур/геометрия),
                         // а не по снимку 3D-вида камеры Inventor.
                         string exportedDxfPath = Path.Combine(subDir, fileName);
+                        bool hasIntersections = HasIntersectionsWithoutAccentLayers(exportedDxfPath, fileStructure);
+                        // TODO: обработать результат проверки пересечений линий DXF (переменная hasIntersections).
                         var flatPreview = BuildFlatPatternPreviewFromDxf(exportedDxfPath, fileStructure);
                         _mainWindow.Dispatcher.Invoke(() => fileStructure.FlatPatternPreview = flatPreview);
                         
@@ -509,6 +511,52 @@ namespace DxfExporter.Export_Dxf
         }
 
         /// <summary>
+        /// Проверяет, есть ли пересечения геометрии в DXF без учёта слоёв гравировки/эскизов/линий гиба.
+        /// </summary>
+        private bool HasIntersectionsWithoutAccentLayers(string dxfPath, StructureClass fileStructure)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(dxfPath) || !IoFile.Exists(dxfPath))
+                {
+                    return false;
+                }
+
+                DxfDocument doc = DxfDocument.Load(dxfPath);
+                if (doc == null)
+                {
+                    return false;
+                }
+
+                var segments = CollectSegmentsForPreview(doc)
+                    .Where(s => !s.IsAccent)
+                    .Where(s => SegmentLengthSquared(s) > 1e-12)
+                    .ToList();
+
+                const double eps = 1e-6;
+
+                for (int i = 0; i < segments.Count; i++)
+                {
+                    for (int j = i + 1; j < segments.Count; j++)
+                    {
+                        if (SegmentsHaveMeaningfulIntersection(segments[i], segments[j], eps))
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _mainWindow.UpdateLog($"Не удалось проверить пересечения в DXF: {fileStructure.DisplayName}. Причина: {ex.Message}");
+                Debug.WriteLine(ex.StackTrace);
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Собирает набор отрезков для отрисовки миниатюры DXF.
         /// Реализация специально сделана через reflection, чтобы работать
         /// на разных версиях netDxf, где коллекции/типы могут отличаться.
@@ -722,6 +770,69 @@ namespace DxfExporter.Export_Dxf
             var prop = owner.GetType().GetProperty(propertyName);
             object raw = prop?.GetValue(owner);
             return raw != null && Convert.ToBoolean(raw);
+        }
+
+        private static double SegmentLengthSquared((double X1, double Y1, double X2, double Y2, bool IsAccent) s)
+        {
+            double dx = s.X2 - s.X1;
+            double dy = s.Y2 - s.Y1;
+            return dx * dx + dy * dy;
+        }
+
+        private static bool SegmentsHaveMeaningfulIntersection(
+            (double X1, double Y1, double X2, double Y2, bool IsAccent) a,
+            (double X1, double Y1, double X2, double Y2, bool IsAccent) b,
+            double eps)
+        {
+            bool intersects = SegmentsIntersect(a.X1, a.Y1, a.X2, a.Y2, b.X1, b.Y1, b.X2, b.Y2, eps);
+            if (!intersects)
+            {
+                return false;
+            }
+
+            // Общая вершина контура (касание только в концах) не считается проблемным пересечением.
+            if (PointsEqual(a.X1, a.Y1, b.X1, b.Y1, eps) ||
+                PointsEqual(a.X1, a.Y1, b.X2, b.Y2, eps) ||
+                PointsEqual(a.X2, a.Y2, b.X1, b.Y1, eps) ||
+                PointsEqual(a.X2, a.Y2, b.X2, b.Y2, eps))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool SegmentsIntersect(double ax, double ay, double bx, double by,
+            double cx, double cy, double dx, double dy, double eps)
+        {
+            double o1 = Cross(ax, ay, bx, by, cx, cy);
+            double o2 = Cross(ax, ay, bx, by, dx, dy);
+            double o3 = Cross(cx, cy, dx, dy, ax, ay);
+            double o4 = Cross(cx, cy, dx, dy, bx, by);
+
+            if (Math.Abs(o1) <= eps && PointOnSegment(cx, cy, ax, ay, bx, by, eps)) return true;
+            if (Math.Abs(o2) <= eps && PointOnSegment(dx, dy, ax, ay, bx, by, eps)) return true;
+            if (Math.Abs(o3) <= eps && PointOnSegment(ax, ay, cx, cy, dx, dy, eps)) return true;
+            if (Math.Abs(o4) <= eps && PointOnSegment(bx, by, cx, cy, dx, dy, eps)) return true;
+
+            return (o1 > eps && o2 < -eps || o1 < -eps && o2 > eps) &&
+                   (o3 > eps && o4 < -eps || o3 < -eps && o4 > eps);
+        }
+
+        private static bool PointOnSegment(double px, double py, double ax, double ay, double bx, double by, double eps)
+        {
+            return px >= Math.Min(ax, bx) - eps && px <= Math.Max(ax, bx) + eps &&
+                   py >= Math.Min(ay, by) - eps && py <= Math.Max(ay, by) + eps;
+        }
+
+        private static double Cross(double ax, double ay, double bx, double by, double px, double py)
+        {
+            return (bx - ax) * (py - ay) - (by - ay) * (px - ax);
+        }
+
+        private static bool PointsEqual(double x1, double y1, double x2, double y2, double eps)
+        {
+            return Math.Abs(x1 - x2) <= eps && Math.Abs(y1 - y2) <= eps;
         }
 
         /// <summary>
