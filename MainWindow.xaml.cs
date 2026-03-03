@@ -2817,7 +2817,7 @@ namespace DxfExporter
         {
             Dispatcher.Invoke(() =>
             {
-                structureClass.RowColor = System.Windows.Media.Brushes.LightGreen;
+                structureClass.RowColor = System.Windows.Media.Brushes.DarkSeaGreen;
                 //structureClass.Status = "";
             });
         }
@@ -2829,7 +2829,15 @@ namespace DxfExporter
         {
             Dispatcher.Invoke(() =>
             {
-                structureClass.RowColor = System.Windows.Media.Brushes.LightCoral;
+                switch (infoStatus)
+                {
+                    case ErrorsConst.DxfIntersections:
+                        structureClass.RowColor = System.Windows.Media.Brushes.Thistle;
+                        break;
+                    case ErrorsConst.ErrorCreateDxf:
+                        structureClass.RowColor = System.Windows.Media.Brushes.LightCoral;
+                        break;
+                }
                 if (!string.IsNullOrWhiteSpace(structureClass.Status))
                 {
                     structureClass.Status += "\n";

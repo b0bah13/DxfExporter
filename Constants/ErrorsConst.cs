@@ -13,6 +13,8 @@ namespace DxfExporter.Constants
         public const string BigFlat = "Не влезет в лист!";
         public const string FakeThickness = "Проверьте толщину!";
         public const string ErrorMatThick = "Нет такого сочетания толщины и материала!";
+        public const string DxfIntersections = "Проверьте пересечение линий в dxf";
+        public const string ErrorCreateDxf = "Не удалось создать dxf";
     }
 
 }

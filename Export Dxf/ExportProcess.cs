@@ -267,14 +267,20 @@ namespace DxfExporter.Export_Dxf
                         // а не по снимку 3D-вида камеры Inventor.
                         string exportedDxfPath = Path.Combine(subDir, fileName);
                         bool hasIntersections = HasIntersectionsWithoutAccentLayers(exportedDxfPath, fileStructure);
-                        // TODO: обработать результат проверки пересечений линий DXF (переменная hasIntersections).
                         var flatPreview = BuildFlatPatternPreviewFromDxf(exportedDxfPath, fileStructure);
                         _mainWindow.Dispatcher.Invoke(() => fileStructure.FlatPatternPreview = flatPreview);
                         
                         _mainWindow.UpdateLog($"Выгружена: {fileName}");
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
                         _mainWindow.MinusProgress(_percent);
-                        _mainWindow.ChangeColor(fileStructure);
+                        if (hasIntersections)
+                        {
+                            _mainWindow.ChangeColor(fileStructure, ErrorsConst.DxfIntersections);
+                        }
+                        else
+                        {
+                            _mainWindow.ChangeColor(fileStructure);
+                        }
                         _mainWindow.SelectAndScrollToItem(fileStructure);
 
                         //внутренний метод для создания структуры папок
@@ -411,9 +417,9 @@ namespace DxfExporter.Export_Dxf
                     }
                     catch (Exception ex)
                     {
-                        _mainWindow.UpdateLog($"Не удалось выгрузить Dxf у детали: {fileStructure.DisplayName}");
+                        _mainWindow.UpdateLog($"Не удалось выгрузить dxf у детали: {fileStructure.DisplayName}");
                         _mainWindow.MinusProgress(_percent);
-                        _mainWindow.ChangeColor(fileStructure,"Не удалось создать Dxf");
+                        _mainWindow.ChangeColor(fileStructure, ErrorsConst.ErrorCreateDxf);
                         Debug.WriteLine(ex.StackTrace);
                         continue;
                     }
