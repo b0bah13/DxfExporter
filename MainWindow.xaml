@@ -511,10 +511,10 @@
                                                 </DataGridTemplateColumn>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}" 
                                                                     ElementStyle="{StaticResource CenteredCellText}"
-                                                                    Width="2.8*" IsReadOnly="True"/>
+                                                                    Width="2.6*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" 
                                                                     ElementStyle="{StaticResource CenteredCellText}"
-                                                                    Width="1.8*" IsReadOnly="True"/>
+                                                                    Width="1.7*" IsReadOnly="True"/>
                                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" 
                                                                     ElementStyle="{StaticResource CenteredCellText}"
                                                                     Width="0.8*" IsReadOnly="True"/>
@@ -621,10 +621,10 @@
                                 </DataGridTemplateColumn>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Обозначение}" Binding="{Binding PartNumber}"
                                                     ElementStyle="{StaticResource CenteredCellText}"
-                                                    Width="2.8*"/>
+                                                    Width="2.6*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Наименование}" Binding="{Binding Description}" 
                                                     ElementStyle="{StaticResource CenteredCellText}"
-                                                    Width="1.8*"/>
+                                                    Width="1.7*"/>
                                 <DataGridTextColumn Header="{x:Static const:HeaderConst.Материал}" Binding="{Binding Material}" 
                                                     ElementStyle="{StaticResource CenteredCellText}"
                                                     Width="0.8*" IsReadOnly="True"/>
