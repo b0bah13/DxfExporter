@@ -181,6 +181,8 @@ namespace DxfExporter.Export_Dxf
                     ?UserChoiceDir(ctx.ScanFilePath)
                     :CheckDrawDirect(ctx.ScanFilePath);
 
+                if (string.IsNullOrEmpty(exportDir)) return exportDir;
+
                 _percent = Math.Round(1.0 / (ctx.UnloadCount), 5);
                 _mainWindow.UpdateOverlay(true);
                 
@@ -994,7 +996,8 @@ namespace DxfExporter.Export_Dxf
                 }
                 else //в случае отмены возвращаем стандартную папку
                 {
-                    return CheckDrawDirect(filePath);
+                    //return CheckDrawDirect(filePath);
+                    return drawingsDir;
                 }
             }
 
