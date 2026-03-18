@@ -355,7 +355,8 @@ namespace DxfExporter.Export_Dxf
                             var invisibleLayersList = new List<string>
                             {
                                 "IV_TANGENT",
-                                "IV_ARC_CENTERS"
+                                "IV_ARC_CENTERS",
+                                "IV_ROLL"
                             };
 
                             // Если НЕ нужны неиспользованные эскизы — скрываем их слой
