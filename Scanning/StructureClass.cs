@@ -147,7 +147,12 @@ namespace DxfExporter.Scanning
         /// Проверка сочетания толщины и материала
         /// </summary>
         public bool ErrorMatThick { get; set; } = false;
-        
+
+        /// <summary>
+        /// Флаг указывающий библиотечный ли файл
+        /// </summary>
+        public bool IsLibraryFile { get; set; } = false;
+
         /// <summary>
         /// Изменение строки статус
         /// </summary>

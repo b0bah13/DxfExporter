@@ -520,6 +520,7 @@ namespace DxfExporter.Scanning
                 NoFlat = !sheetMetalCompDef.HasFlatPattern,
                 NullFlat = sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0,
                 BigFlat = isBigFlat,
+                IsLibraryFile = partDoc.FullFileName.Contains(@"\БИБЛИОТЕКА ДЕТАЛЕЙ\"),
                 ErrorMatThick = errorMatThick,
                 FakeThickness = realThick == 0 ? false : realThick != thick
             };
@@ -573,6 +574,7 @@ namespace DxfExporter.Scanning
                 NullFlat = true,
                 BigFlat = false,
                 ErrorMatThick = false,
+                IsLibraryFile = false,
                 FakeThickness = false,
                 Status = "Данное исполнение не выгружено!"
             };

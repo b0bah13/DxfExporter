@@ -15,6 +15,7 @@ namespace DxfExporter.Constants
         public const string ErrorMatThick = "Нет такого сочетания толщины и материала!";
         public const string DxfIntersections = "Проверьте пересечение линий в dxf";
         public const string ErrorCreateDxf = "Не удалось создать dxf";
+        public const string LibraryFile = "Файл из библиотеки";
     }
 
 }

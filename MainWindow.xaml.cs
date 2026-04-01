@@ -2994,6 +2994,14 @@ namespace DxfExporter
                         structureClass.RowColor = System.Windows.Media.Brushes.LightGray;
                     }
                 }
+                else if (structureClass.IsLibraryFile)
+                {
+                    if (!structureClass.Status.Contains(ErrorsConst.LibraryFile))
+                    {
+                        structureClass.Status += ErrorsConst.LibraryFile;
+                        structureClass.RowColor = System.Windows.Media.Brushes.AntiqueWhite;
+                    }
+                }
 
                 structureClass.Status = structureClass.Status.Trim();
             }
@@ -3458,7 +3466,7 @@ namespace DxfExporter
                     case "1.0.3.0":
                         //В этой версии ничего не показываем
                         break;
-                    case "1.0.3.2":
+                    case "1.0.4.0":
                         StartTour(11);
                         break;
                 }
