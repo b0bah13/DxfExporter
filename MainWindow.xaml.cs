@@ -65,7 +65,8 @@ namespace DxfExporter
         };
 
         public string AppVersion { get; private set; }
-        public string _scanFilePath,_exportDir;
+        public string _scanFilePath;
+        public List<string> _exportDir;
 
         public MaskEditorViewModel MaskVm { get; } = new MaskEditorViewModel();
         public StateWithMessage CheckExit = new StateWithMessage { };
@@ -91,6 +92,7 @@ namespace DxfExporter
             public bool SubFolderMaterials { get; set; } = true;
             public bool SubFolderThickness { get; set; } = true;
             public bool UserDxfDir { get; set; } = false;
+            public bool ForEachDocDirect { get; set; } = false;
         }
 
         /// <summary>
@@ -101,6 +103,7 @@ namespace DxfExporter
             public bool CheckGab { get; set; } = true;
             public string PathTable { get; set; } = defaultPathTable;
             public bool ScanAllIpart { get; set; } = false;
+
         }
 
         /// <summary>
@@ -110,6 +113,7 @@ namespace DxfExporter
         {
             //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
             public bool UserDxfDir { get; set; }
+            public bool ForEachDocDirect { get; set; }
             public bool CategorizeMaterial { get; set; } = true;
             public bool CategorizeThickness { get; set; } = true;
             public bool CheckGab { get; set; } = true;
@@ -507,13 +511,28 @@ namespace DxfExporter
                     break;
                 case "userDirect":
                     FolderSettings.UserDxfDir = userDirect.IsChecked == true;
+                    // Если включили — выключаем второй
+                    if (userDirect.IsChecked == true)
+                    {
+                        forEachDocDirect.IsChecked = false;
+                    }
                     break;
+                case "forEachDocDirect":
+                    FolderSettings.ForEachDocDirect = forEachDocDirect.IsChecked == true;
+                    // Если включили — выключаем второй
+                    if (forEachDocDirect.IsChecked == true)
+                    {
+                        userDirect.IsChecked = false;
+                    }
+                    break;
+
                 case "checkGab":
                     CheckSettings.CheckGab = checkGab.IsChecked == true;
                     break;
                 case "scanAllIpart":
                     CheckSettings.ScanAllIpart = scanAllIpart.IsChecked == true;
                     break;
+                
             }
 
             UpdateTooltip();
@@ -581,9 +600,22 @@ namespace DxfExporter
         /// <param name="e"></param>
         private void openButton_Click(object sender, RoutedEventArgs e)
         {
-            if(string.IsNullOrEmpty(_exportDir)) return;
-            if(!System.IO.Path.Exists(_exportDir))return;
-            Process.Start("explorer.exe", $"\"{_exportDir}\"");
+            for (var i = 0; i < _exportDir.Count; i++)
+            {
+                string dirPath = _exportDir[i];
+
+                // Пропускаем первый элемент, если включён режим "каждый файл"
+                if (FolderSettings.ForEachDocDirect && i == 0) continue;
+                
+                // Валидация пути
+                if (string.IsNullOrWhiteSpace(dirPath)) continue;
+                if (!Directory.Exists(dirPath)) continue;
+
+                Process.Start("explorer.exe", $"\"{dirPath}\"");
+
+                // Если нужен только первый — выходим
+                if (!FolderSettings.ForEachDocDirect) break; 
+            }
         }
 
         /// <summary>
@@ -690,6 +722,7 @@ namespace DxfExporter
         private void clearSettingsButton_Click(object sender, RoutedEventArgs e)
         {
             userDirect.IsChecked = false;
+            forEachDocDirect.IsChecked = false;
             categorizeMaterial.IsChecked = true;
             categorizeThickness.IsChecked = true;
             checkGab.IsChecked = true;
@@ -1473,11 +1506,19 @@ namespace DxfExporter
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
+                Target = forEachDocDirect,
+                Title = "Папка выгрузки",
+                Description = "При включении сохранит каждый DXF файл в папку где сохранена модель."
+            });
+            //№12
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
                 Target = categorizeMaterial,
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по материалам."
             });
-            //№12
+            //№13
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1485,7 +1526,7 @@ namespace DxfExporter
                 Title = "Папка выгрузки",
                 Description = "Включает распределение DXF файлов по толщинам."
             });
-            //№13
+            //№14
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1493,7 +1534,7 @@ namespace DxfExporter
                 Title = "Детали с исполнениями",
                 Description = "Включает полное сканирование параметрической детали, детали с состояниями."
             });
-            //№14
+            //№15
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1501,7 +1542,7 @@ namespace DxfExporter
                 Title = "Проверка развёртки",
                 Description = "Включает проверку развёртки при выгрузке.\nДанные по листам берутся из 'Таблицы соответствия'."
             });
-            //№15
+            //№16
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1509,7 +1550,7 @@ namespace DxfExporter
                 Title = "Шаблон имени",
                 Description = "Выберите шаблон имени файла DXF или настройте собственный."
             });
-            //№16
+            //№17
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1517,7 +1558,7 @@ namespace DxfExporter
                 Title = "Состав шаблона",
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
-            //№17
+            //№18
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -3241,6 +3282,13 @@ namespace DxfExporter
                     : "Используется папка по умолчанию - 'Чертежи' если проект находится в 'Модель'"; //Выключено
             }
 
+            if (forEachDocDirect != null)
+            {
+                forEachDocDirect.ToolTip = forEachDocDirect?.IsChecked == true
+                    ? "При создании dxf каждый файл будет сохранён в папку с моделью" //Включено: 
+                    : "Используется папка первого элемента в таблице. При сканировании сборки - папка сборки"; //Выключено
+            }
+
             if (categorizeMaterial != null)
             {
                 categorizeMaterial.ToolTip = categorizeMaterial?.IsChecked == true
@@ -3290,6 +3338,7 @@ namespace DxfExporter
                 _isApplyingSettings = true;
 
                 userDirect.IsChecked = state.UserDxfDir;
+                forEachDocDirect.IsChecked = state.ForEachDocDirect;
                 categorizeMaterial.IsChecked = state.CategorizeMaterial;
                 categorizeThickness.IsChecked = state.CategorizeThickness;
                 checkGab.IsChecked = state.CheckGab;
@@ -3349,6 +3398,7 @@ namespace DxfExporter
                 {
                     //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
                     UserDxfDir = userDirect?.IsChecked == true,
+                    ForEachDocDirect = forEachDocDirect?.IsChecked == true,
                     CategorizeMaterial = categorizeMaterial?.IsChecked == true,
                     CategorizeThickness = categorizeThickness?.IsChecked == true,
                     CheckGab = checkGab?.IsChecked == true,
@@ -3400,13 +3450,16 @@ namespace DxfExporter
                         StartTour(1);
                         break;
                     case "1.0.1.2":
-                        StartTour(17);
+                        StartTour(18);
                         break;
                     case "1.0.2.0":
-                        StartTour(13);
+                        StartTour(14);
                         break;
                     case "1.0.3.0":
                         //В этой версии ничего не показываем
+                        break;
+                    case "1.0.3.2":
+                        StartTour(11);
                         break;
                 }
             }

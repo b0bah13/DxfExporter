@@ -137,7 +137,7 @@ namespace DxfExporter.Export_Dxf
         /// <param name="cancellationToken">Токен отмены обработки</param>
         /// <param name="procData">Список деталей для обработки</param>
         /// <param name="maskData">Маска/фильтры выгрузки</param>
-        public async Task<string> StartProcessExport(CancellationToken cancellationToken, ObservableCollection<StructureClass> procData,
+        public async Task<List<string>> StartProcessExport(CancellationToken cancellationToken, ObservableCollection<StructureClass> procData,
             ObservableCollection<MaskPart> maskData, string modeName, string scanFilePath, ExportSettings folderSettings,
              int unloadCount)
         {
@@ -156,7 +156,7 @@ namespace DxfExporter.Export_Dxf
                             MessageBoxButton.OK, MessageBoxImage.Stop);
                     });
                     
-                    return String.Empty;
+                    return new List<string>();
                 }
 
                 return dir;
@@ -168,20 +168,25 @@ namespace DxfExporter.Export_Dxf
         /// Метод обработка выгрузки dxf
         /// </summary>
         /// <param name="ctx">Контекстный класс</param>
-        private string ExportProcessing(ExportContext ctx)
+        private List<string> ExportProcessing(ExportContext ctx)
         {
             // Вызывает исключение, если приложение закрыли
             ctx.CancellationToken.ThrowIfCancellationRequested();
-            string exportDir = String.Empty;
-            
+            List<string> exportDir = new List<string>();
+
             try
             {
-                // Проверка есть ли папка Чертежи
-                exportDir = ctx.FolderSettings.UserDxfDir 
-                    ?UserChoiceDir(ctx.ScanFilePath)
-                    :CheckDrawDirect(ctx.ScanFilePath);
+                //если папка для каждого файла, то не добавляем исходный путь
+                if (!ctx.FolderSettings.ForEachDocDirect)
+                {
+                    // Проверка есть ли папка Чертежи
+                    exportDir.Add(ctx.FolderSettings.UserDxfDir
+                        ? UserChoiceDir(ctx.ScanFilePath)
+                        : CheckDrawDirect(ctx.ScanFilePath)
+                    );
 
-                if (string.IsNullOrEmpty(exportDir)) return exportDir;
+                    if (string.IsNullOrEmpty(exportDir[0])) return exportDir;
+                }                
 
                 _percent = Math.Round(1.0 / (ctx.UnloadCount), 5);
                 _mainWindow.UpdateOverlay(true);
@@ -193,7 +198,7 @@ namespace DxfExporter.Export_Dxf
                     ctx.CancellationToken.ThrowIfCancellationRequested();
                     
                     // Выход, если приложение сигнализирует о завершении
-                    if (_mainWindow.CheckExit.NeedExit) return String.Empty;
+                    if (_mainWindow.CheckExit.NeedExit) return new List<string>();
 
                     _mainWindow.UpdateOverlay(CommonConstants.OverlayProcessDxf, fileStructure.DisplayName);
 
@@ -257,6 +262,10 @@ namespace DxfExporter.Export_Dxf
                         
                         //Получение структуры папок
                         string subDir = CreateDirStructure();
+                        if (ctx.FolderSettings.ForEachDocDirect)
+                        {
+                            if (!exportDir.Contains(subDir)) exportDir.Add(subDir);
+                        }                        
                         if (!Directory.Exists(subDir)) Directory.CreateDirectory(subDir);
 
                         //Получение имени файла из выбранной маски выгрузки
@@ -272,7 +281,10 @@ namespace DxfExporter.Export_Dxf
                         var flatPreview = BuildFlatPatternPreviewFromDxf(exportedDxfPath, fileStructure);
                         _mainWindow.Dispatcher.Invoke(() => fileStructure.FlatPatternPreview = flatPreview);
                         
-                        _mainWindow.UpdateLog($"Выгружена: {fileName}");
+                        string txtLog = ctx.FolderSettings.ForEachDocDirect
+                            ? $"Выгружена: {fileName}\t в папку: {subDir}"
+                            : $"Выгружена: {fileName}";
+                        _mainWindow.UpdateLog(txtLog);
                         //_mainWindow.UpdateLog($"Обработана деталь: {fileStructure.DisplayName}");
                         _mainWindow.MinusProgress(_percent);
                         if (hasIntersections)
@@ -288,7 +300,10 @@ namespace DxfExporter.Export_Dxf
                         //внутренний метод для создания структуры папок
                         string CreateDirStructure ()
                         {
-                            string dir = exportDir;
+                            string? modelDir = Path.GetDirectoryName(fileStructure.Path);
+                            string dir = ctx.FolderSettings.ForEachDocDirect
+                                ? modelDir ?? exportDir[0] // на случай, если modelDir == null
+                                : exportDir[0];
 
                             //Создание структуры папок в папке dxf
                             //если выгрузка в шаблоны

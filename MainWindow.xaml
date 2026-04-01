@@ -714,7 +714,7 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem x:Name="SettingsTab" Header="Настройки">
+                <TabItem x:Name="SettingsTab" Header="Настройки" Height="20" VerticalAlignment="Top">
                     <Grid Margin="10,10,10,10" Grid.Row="1">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -729,17 +729,22 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
                                 <CheckBox x:Name="userDirect" Content="Пользовательское расположение папки DXF" 
-                                    IsChecked="False" Margin="5,3,5,5" 
-                                    ToolTipService.InitialShowDelay="400"
-                                    Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"/>
+                                          IsChecked="False" Margin="5,3,5,5" 
+                                          ToolTipService.InitialShowDelay="400"
+                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"/>
+                                <CheckBox x:Name="forEachDocDirect" Content="Сохранять каждый DXF в папку с деталью" 
+                                          IsChecked="False" Margin="5,0,5,5" 
+                                          ToolTipService.InitialShowDelay="400"
+                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked" Grid.Row="1"/>
                                 <CheckBox x:Name="categorizeMaterial" Content="Распределить по материалам" 
                                           IsChecked="True" Margin="5,0,5,5" 
                                           ToolTipService.InitialShowDelay="400"
-                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked" Grid.Row="1"/>
-                                <CheckBox x:Name="categorizeThickness" Content="Распределить по толщинам" Grid.Row="2" 
+                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked" Grid.Row="2"/>
+                                <CheckBox x:Name="categorizeThickness" Content="Распределить по толщинам" Grid.Row="3" 
                                           IsChecked="True" Margin="5,0,5,0" 
                                           ToolTipService.InitialShowDelay="400"
                                           Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"/>
