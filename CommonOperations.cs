@@ -3,6 +3,9 @@ using System.DirectoryServices.AccountManagement;
 using System.Runtime.InteropServices;
 using Inventor;
 using Outlook = Microsoft.Office.Interop.Outlook;
+using System.IO;
+using File = System.IO.File;
+using Path = System.IO.Path;
 
 namespace DxfExporter
 {
@@ -11,6 +14,8 @@ namespace DxfExporter
     {
         public static string ProgramName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name; //имя программы
         public const string AdminEmailAdres = "grahov@szemospb.ru"; //почта админа
+        private static readonly string _cooldownFilePath = Path.Combine(Path.GetTempPath(), "LastErrorEmailSent.txt");
+        private static readonly TimeSpan _emailCooldown = TimeSpan.FromMinutes(5);
 
         /// <summary>
         /// Словарь для замены запрещённых символов в параметрических деталях
@@ -34,7 +39,9 @@ namespace DxfExporter
             try
             {
                 if (userName.Contains("Грахов")) { return; }
-
+                
+                if (IsCooldownActive()) { return; }
+                
                 Outlook.Application outlookApp = new Outlook.Application();
                 Outlook.MailItem mailItem = (Outlook.MailItem)outlookApp.CreateItem(Outlook.OlItemType.olMailItem);
 
@@ -75,6 +82,47 @@ namespace DxfExporter
             catch (System.Exception ex)
             {
                 Debug.WriteLine($"Error Message Not Sent. Please email the issue to {AdminEmailAdres}\nDetails: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Проверка прошло ли 5 минут с момента отправки письма
+        /// </summary>
+        /// <returns></returns>
+        private static bool IsCooldownActive()
+        {
+            try
+            {
+                if (!File.Exists(_cooldownFilePath))
+                    return false;
+
+                string text = File.ReadAllText(_cooldownFilePath).Trim();
+
+                if (DateTime.TryParse(text, out DateTime lastSent))
+                {
+                    return DateTime.UtcNow - lastSent <= _emailCooldown;
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+
+            return false; // если что-то пошло не так — разрешаем отправить
+        }
+
+        /// <summary>
+        /// Обновляем время в файле
+        /// </summary>
+        private static void UpdateLastErrorEmailTime()
+        {
+            try
+            {
+                File.WriteAllText(_cooldownFilePath, DateTime.UtcNow.ToString("o"));
+            }
+            catch
+            {
+                // ignored
             }
         }
 

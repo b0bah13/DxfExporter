@@ -179,6 +179,14 @@ namespace DxfExporter
 
         public MainWindow()
         {
+            // Проверка защиты ДО InitializeComponent
+            if (!EnterpriseProtection.ValidateAll())
+            {
+                // Если хоть одна проверка провалилась — класс уже показал сообщение и пытается удалиться
+                Close();           // или return; но лучше Close()
+                return;
+            }
+
             InitializeComponent();
             SubscribeMainGridColumnWidthSync();
 

@@ -118,11 +118,6 @@ namespace DxfExporter.Export_Dxf
                 [HeaderConst.Количество] = s => s.Quantity?.ToString() ?? string.Empty
             };
         
-
-        //для ограничения отправки писем
-        private static DateTime _lastErrorEmailSent = DateTime.MinValue;
-        private static readonly TimeSpan _emailCooldown = TimeSpan.FromMinutes(5);
-
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr hObject);
 
@@ -476,12 +471,8 @@ namespace DxfExporter.Export_Dxf
                     $"\t{ _mainWindow.CheckExit.Message}",
                     $"\tПоследние логи:\n{_mainWindow.GetLinesAsText()}"
                 };
-                if (DateTime.UtcNow - _lastErrorEmailSent >= _emailCooldown)
-                {
-                    CommonOperations.EmailOnError(ex.Message, ex.StackTrace, ctx.InvApp.UserName, infoList);
-                    _lastErrorEmailSent = DateTime.UtcNow;  // фиксируем время отправки
-                }
-
+                
+                CommonOperations.EmailOnError(ex.Message, ex.StackTrace, ctx.InvApp.UserName, infoList);
                 //throw new InvalidOperationException(ex.Message, ex);
             }
             finally

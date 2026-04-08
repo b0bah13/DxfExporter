@@ -22,10 +22,6 @@ namespace DxfExporter.Scanning
         private Inventor.Application _invApp = null;
         private Document _scanDoc = null;
         private double _percent;
-
-        //для ограничения отправки писем
-        private static DateTime _lastErrorEmailSent = DateTime.MinValue;
-        private static readonly TimeSpan _emailCooldown = TimeSpan.FromMinutes(5);
         
         /// <summary>
         /// Настройки проверки габарита развёртки
@@ -195,12 +191,8 @@ namespace DxfExporter.Scanning
                     $"\t{ _mainWindow.CheckExit.Message}",
                     $"\tПоследние логи:\n{_mainWindow.GetLinesAsText()}"
                 };
-                if (DateTime.UtcNow - _lastErrorEmailSent >= _emailCooldown)
-                {
-                    CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
-                    _lastErrorEmailSent = DateTime.UtcNow;  // фиксируем время отправки
-                }
-
+               
+                CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
                 //throw new InvalidOperationException(ex.Message,ex);
             }
             finally
@@ -497,10 +489,12 @@ namespace DxfExporter.Scanning
                 }
             }
 
+            bool library = partDoc.FullFileName.Contains(@"\БИБЛИОТЕКА ДЕТАЛЕЙ\");
+
             //Создание структуры
             StructureClass structure = new StructureClass
             {
-                //NeedUnload = true, - по умолчанию
+                NeedUnload = !library,
                 PartNumber = partNumber,
                 Description = description,
                 Path = partDoc.FullFileName,
@@ -520,7 +514,7 @@ namespace DxfExporter.Scanning
                 NoFlat = !sheetMetalCompDef.HasFlatPattern,
                 NullFlat = sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0,
                 BigFlat = isBigFlat,
-                IsLibraryFile = partDoc.FullFileName.Contains(@"\БИБЛИОТЕКА ДЕТАЛЕЙ\"),
+                IsLibraryFile = library,
                 ErrorMatThick = errorMatThick,
                 FakeThickness = realThick == 0 ? false : realThick != thick
             };
@@ -820,11 +814,9 @@ namespace DxfExporter.Scanning
                     $"\t{ _mainWindow.CheckExit.Message}",
                     $"\tПоследние логи:\n{_mainWindow.GetLinesAsText()}"
                 };
-                if (DateTime.UtcNow - _lastErrorEmailSent >= _emailCooldown)
-                {
-                    CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
-                    _lastErrorEmailSent = DateTime.UtcNow;  // фиксируем время отправки
-                }
+                
+                CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
+                   
 
                 //throw new InvalidOperationException(ex.Message,ex);
             }
@@ -930,12 +922,8 @@ namespace DxfExporter.Scanning
                     $"\t{ _mainWindow.CheckExit.Message}",
                     $"\tПоследние логи:\n{_mainWindow.GetLinesAsText()}"
                 };
-                if (DateTime.UtcNow - _lastErrorEmailSent >= _emailCooldown)
-                {
-                    CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
-                    _lastErrorEmailSent = DateTime.UtcNow;  // фиксируем время отправки
-                }
-
+               
+                CommonOperations.EmailOnError(ex.Message, ex.StackTrace, _invApp.UserName, infoList);
                 //throw new InvalidOperationException(ex.Message,ex);
             }
             finally
