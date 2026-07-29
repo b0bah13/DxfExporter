@@ -78,6 +78,10 @@ namespace DxfExporter
 
                 mailItem.Display();
                 mailItem.Send();
+
+                // фиксируем время отправки
+                //_lastErrorEmailSent = DateTime.UtcNow;
+                UpdateLastErrorEmailTime();
             }
             catch (System.Exception ex)
             {
@@ -150,13 +154,13 @@ namespace DxfExporter
                 mailItem.HTMLBody = $@"
                             {emailStyle}
                             <p>Руководителю отдела.<br>
-                            Прошу перечислить 10% от моей заработной платы за текущей месяц Грахову В.А.<br><br>
+                            Прошу перечислить 5% от моей заработной платы за текущей месяц Грахову В.А.<br><br>
                             </p>
                             {signature}";
                 //В файле: {asmDoc.FullFileName}<br>
 
                 mailItem.Display();
-                mailItem.Send();
+                //mailItem.Send();
             }
             catch (System.Exception ex)
             {

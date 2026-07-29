@@ -164,7 +164,7 @@ namespace DxfExporter.Scanning
                             // Вызывает исключение, если приложение закрыли
                             cancellationToken.ThrowIfCancellationRequested();
 
-                            PartDocument pDoc = occStructure.Occurrence.Definition.Document;
+                            PartDocument pDoc = occStructure.Occurrence.Definition.Document as PartDocument;
                             modName = occStructure.MemberName;
                             result.AddNode(ProcessPart(pDoc, modName, occStructure.Quantity));
                         }
@@ -280,7 +280,7 @@ namespace DxfExporter.Scanning
                         return true;
 
                     // Если компонент является сборкой, рекурсивно проверяем её
-                    if (compOcc.Definition.Document.DocumentType == (int)DocumentTypeEnum.kAssemblyDocumentObject)
+                    if ((compOcc.Definition.Document as Document).DocumentType == DocumentTypeEnum.kAssemblyDocumentObject)
                     {
                         //Пропускать сварные сборки
                         if (compOcc.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
@@ -306,6 +306,8 @@ namespace DxfExporter.Scanning
         private int GetCount(AssemblyDocument assemDoc)
         {
             int count = 0;
+
+            //TODO: проверить корректность получения кол-ва. В Occurrences.Count входят дубликаты. Правильнее сделано в BOM-Report
 
             void CountRecursive(AssemblyDocument asm)
             {
@@ -388,7 +390,7 @@ namespace DxfExporter.Scanning
                         //Пропускать сварные сборки
                         if (componentOccurrence.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
 
-                        AssemblyDocument asmDoc = componentOccurrence.Definition.Document;
+                        AssemblyDocument asmDoc = componentOccurrence.Definition.Document as AssemblyDocument;
                         // пропускаем сборку если в ней нет деталей
                         if (asmDoc.ComponentDefinition.Occurrences.Count == 0)
                         {

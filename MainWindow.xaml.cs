@@ -36,7 +36,7 @@ using System.Reflection.Metadata;
 using Document = Inventor.Document;
 using System.Collections.Specialized;
 using System.IO;
-
+using Dino.Services;
 
 namespace DxfExporter
 {
@@ -123,8 +123,14 @@ namespace DxfExporter
             public string? CustomText { get; set; }
             public List<string> MaskParts { get; set; } = new List<string>();
         }
-        
+
         #endregion
+
+        //Для секретной пасхалки
+        private string _secretSequence = "iddqd";   // любая последовательность
+        private string _currentInput = "";
+        private const int MaxSequenceLength = 20;   // защита от бесконечного роста
+        private DinoGameWindow? _dinoWindow;
 
         #region Данные для фраз
 
@@ -699,13 +705,87 @@ namespace DxfExporter
                 }
                 
                 _quoteTimer.Start();
+
+                // Подписываемся на клавиши
+                _currentInput = "";
+                this.KeyDown -= Window_KeyDown;   // сначала снимаем, чтобы не было двойной подписки
+                this.KeyDown += Window_KeyDown;          // или PreviewKeyDown
+                // Если нужно, чтобы фокус не мешал — можно ещё:
+                // this.Focusable = true;
+                // this.Focus();
             }
             else
             {
                 _quoteTimer?.Stop();
+
+                CloseDinoGame();
             }
         }
-        
+
+        /// <summary>
+        /// Проверка нажатия клавиш
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Игнорируем модификаторы и служебные клавиши
+            if (e.Key == Key.LeftShift || e.Key == Key.RightShift ||
+                e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl ||
+                e.Key == Key.LeftAlt || e.Key == Key.RightAlt ||
+                e.Key == Key.System)
+                return;
+
+            // Получаем символ (для букв)
+            string keyStr = e.Key.ToString().ToLower();
+
+            // Можно более аккуратно через KeyConverter / InputLanguageManager,
+            // но для простых латинских букв этого достаточно:
+            if (keyStr.Length == 1 && char.IsLetter(keyStr[0]))
+            {
+                _currentInput += keyStr;
+
+                // Ограничиваем длину
+                if (_currentInput.Length > MaxSequenceLength)
+                    _currentInput = _currentInput.Substring(_currentInput.Length - MaxSequenceLength);
+
+                // Проверяем, содержит ли введённое секретную последовательность
+                if (_currentInput.Contains(_secretSequence))
+                {
+                    string nameSpace = this.GetType().Namespace;
+                    WebView2LoaderHelper.EnsureLoader(nameSpace);
+
+                    // === ПАСХАЛКА ===
+                    TriggerEasterEgg();
+
+                    _currentInput = "";   // сбрасываем, чтобы не срабатывало повторно сразу
+                }
+            }
+            // Можно добавить обработку Backspace, если хочешь позволять исправлять
+            else if (e.Key == Key.Back && _currentInput.Length > 0)
+            {
+                _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
+            }
+        }
+
+        /// <summary>
+        /// Запуск игры
+        /// </summary>
+        private void TriggerEasterEgg()
+        {
+            //Проверка, можно ли запустить игру
+            if (!DinoGameWindow.CanStart) return;
+
+            // Если уже открыто — не открываем второе
+            if (_dinoWindow != null) return;
+
+            _dinoWindow = new DinoGameWindow();
+            // Когда пользователь сам закрывает окно — обнуляем ссылку
+            _dinoWindow.Closed += (s, e) => _dinoWindow = null;
+
+            _dinoWindow.Show();
+        }
+
         /// <summary>
         /// Обрабатывает изменения коллекции частей маски и сохраняет состояние вкладки настроек.
         /// </summary>
@@ -1969,6 +2049,8 @@ namespace DxfExporter
                     _ => txtStatus.Text
                 };
             }
+
+            CloseDinoGame();
         }
 
         /// <summary>
@@ -2496,7 +2578,7 @@ namespace DxfExporter
 
             // Расчёт времени показа
             // 25 символов - 1 секунда
-            double seconds = Math.Max(3.0, text.Length / 25.0);
+            double seconds = Math.Max(3.0, text.Length / 20.0);
             seconds = Math.Round(seconds, 1);
 
             if (_quoteTimer != null)
@@ -2580,6 +2662,17 @@ namespace DxfExporter
             }
             */
 
+        }
+
+        /// <summary>
+        /// Принудительное закрытие окна
+        /// </summary>
+        private void CloseDinoGame()
+        {
+            this.KeyDown -= Window_KeyDown;   // отписка
+            _currentInput = "";               // сброс последовательности
+            _dinoWindow?.Close();
+            _dinoWindow = null;
         }
 
         /// <summary>

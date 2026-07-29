@@ -149,13 +149,140 @@
         </Style>
 
         <!-- ======== Поля ввода / ComboBox стиль ======== -->
+        <!-- ======== Поля ввода / ComboBox стиль ======== -->
         <Style TargetType="{x:Type ComboBox}" x:Key="ComboBoxStyle">
             <Setter Property="Foreground" Value="#333"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Padding" Value="5,2,5,2"/>
+            <!-- больше справа, чтобы не налезало на стрелку -->
             <Setter Property="BorderBrush" Value="#C5CAD5"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Background" Value="White"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ComboBox}">
+                        <Grid SnapsToDevicePixels="True">
+                            <!-- Основная рамка -->
+                            <Border x:Name="Bd"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="4"/>
+
+                            <!-- Содержимое + кнопка стрелки -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Невидимая область клика -->
+                                <ToggleButton
+                                    Grid.Column="0"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Focusable="False"
+                                    OverridesDefaultStyle="True"
+                                    IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="Transparent"/>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+
+                                </ToggleButton>
+
+
+                                <!-- Выбранное значение / редактируемый текст -->
+                                <ContentPresenter x:Name="ContentSite"
+                                                  IsHitTestVisible="False"
+                                      Content="{TemplateBinding SelectionBoxItem}"
+                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                      Margin="{TemplateBinding Padding}"
+                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+
+                                <!-- Кнопка со стрелкой (ToggleButton) -->
+                                <ToggleButton x:Name="ToggleButton"
+                                  Grid.Column="1"
+                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                  Focusable="False"
+                                  ClickMode="Press"
+                                  Padding="5,0"
+                                  Background="Transparent"
+                                  BorderBrush="Transparent">
+                                    <ToggleButton.Template>
+                                        <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                            <Border Background="Transparent" 
+                                        Width="20" 
+                                        HorizontalAlignment="Right">
+                                                <Path x:Name="Arrow"
+                                          Margin="0,1,0,0"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          Data="M 0 0 L 4 4 L 8 0 Z"
+                                          Fill="#666666"
+                                          Width="8"
+                                          Height="5"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </ToggleButton.Template>
+                                </ToggleButton>
+                            </Grid>
+
+                            <!-- Выпадающий список -->
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="True"
+                                   IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Bottom"
+                                   PopupAnimation="Slide"
+                                   Margin="1,1,1,1">
+                                <Border x:Name="DropDownBorder"
+                                                Background="White"
+                                                BorderBrush="#C5CAD5"
+                                                BorderThickness="1"
+                                                CornerRadius="4"
+                                                MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                    <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                                  SnapsToDevicePixels="True">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+
+                        <ControlTemplate.Triggers>
+                            <!-- Неактивный -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.56"/>
+                                <Setter Property="Foreground" Value="#999"/>
+                            </Trigger>
+
+                            <!-- Наведение мыши -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#7EB4EA"/>
+                            </Trigger>
+
+                            <!-- Фокус -->
+                            <Trigger Property="IsFocused" Value="True" SourceName="Bd">
+                                <!-- или просто IsKeyboardFocusWithin -->
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#569DE5"/>
+                            </Trigger>
+
+                            <!-- Открытый дропдаун (можно усилить цвет) -->
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#569DE5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
+
         </Style>
 
         <Style TargetType="{x:Type TextBox}" x:Key="TextBoxStyle">
@@ -234,6 +361,8 @@
                 </Setter.Value>
             </Setter>
         </Style>
+
+
 
     </Window.Resources>
 

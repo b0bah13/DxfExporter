@@ -24,6 +24,11 @@
     <None Remove="Open-folder-add.png" />
     <None Remove="refresh settings.png" />
     <None Remove="refresh.png" />
+    <None Remove="WebView2Loader.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="WebView2Loader.dll" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,6 +44,7 @@
 
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="8.4.2" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
     <PackageReference Include="netDxf" Version="2023.11.10" />
     <PackageReference Include="System.DirectoryServices.AccountManagement" Version="10.0.2" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.0" />
@@ -46,9 +52,7 @@
 
   <ItemGroup>
     <Reference Include="Autodesk.Inventor.Interop">
-      <HintPath>C:\Program Files\Autodesk\Inventor 2023\Bin\Public Assemblies\Autodesk.Inventor.Interop.dll</HintPath>
-      <EmbedInteropTypes>True</EmbedInteropTypes>
-      <Private>False</Private>
+      <HintPath>C:\Program Files\Autodesk\Inventor 2026\Bin\Public Assemblies\Autodesk.Inventor.Interop.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Office.Interop.Outlook">
       <HintPath>C:\Program Files (x86)\Microsoft Visual Studio\Shared\Visual Studio Tools for Office\PIA\Office15\Microsoft.Office.Interop.Outlook.dll</HintPath>

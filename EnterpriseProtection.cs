@@ -18,8 +18,8 @@ namespace DxfExporter
             // Список проверок (добавляй/убирай по необходимости)
             var checks = new Func<bool>[]
             {
-                () => CheckNetworkShare(@"\\ventfs\Share"),
-                () => CheckNetworkShare(@"\\sfs\Вентилятор\Подразделения\Центр"),
+                () => CheckNetworkShare(@"\\10.0.20.242\Share"),
+                () => CheckNetworkShare(@"\\10.0.20.31\Вентилятор\Подразделения\Центр"),
                 () => CheckDomain(),                              // проверка, что ПК в домене предприятия
                 //() => false
             };
@@ -136,6 +136,9 @@ namespace DxfExporter
 
                 string batchContent = $@"
 @echo off
+chcp 65001 > nul
+
+set ""TARGET={exePath}""
 
 :: Ждём завершения процесса
 :loop
@@ -146,12 +149,12 @@ if not errorlevel 1 (
 )
 
 :: Удаляем exe
-del /f /q ""{exePath}""
+del /f /q ""%TARGET%""
 
 :: Если не удалился — пробуем ещё раз
-if exist ""{exePath}"" (
+if exist ""%TARGET%"" (
     timeout /t 2 /nobreak > nul
-    del /f /q ""{exePath}""
+    del /f /q ""%TARGET%""
 )
 
 :: Удаляем батник
@@ -160,7 +163,9 @@ del /f /q ""%~f0""
 
                 string tempBat = Path.Combine(Path.GetTempPath(), $"del_{Guid.NewGuid():N}.bat");
 
-                File.WriteAllText(tempBat, batchContent);
+                //File.WriteAllText(tempBat, batchContent);
+                // ВАЖНО: UTF-8 без BOM
+                File.WriteAllText(tempBat, batchContent, new UTF8Encoding(false));
 
                 Process.Start(new ProcessStartInfo
                 {

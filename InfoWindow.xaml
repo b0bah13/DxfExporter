@@ -186,11 +186,12 @@
             ResizeBorderThickness="6"/>
     </WindowChrome.WindowChrome>
     <!-- Кастомная рамка окна -->
+    
     <Border Grid.Row="0" 
-                BorderBrush="#FFAAAAAA" 
-                BorderThickness="1" 
-                CornerRadius="2"
-                Background="White">
+            BorderBrush="#FFAAAAAA" 
+            BorderThickness="1" 
+            CornerRadius="2"
+            Background="White">
 
         <Border.Effect>
             <DropShadowEffect 
@@ -262,4 +263,5 @@
 
         </Grid>
     </Border>
+
 </Window>
