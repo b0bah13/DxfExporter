@@ -111,7 +111,6 @@
             </Setter>
         </Style>
 
-
         <!-- Стиль плитки (Border) -->
         <Style x:Key="ToolTileStyle" TargetType="{x:Type Border}">
             <Setter Property="Width" Value="160"/>
@@ -148,7 +147,6 @@
             <Setter Property="Margin" Value="10,8,10,0"/>
         </Style>
 
-        <!-- ======== Поля ввода / ComboBox стиль ======== -->
         <!-- ======== Поля ввода / ComboBox стиль ======== -->
         <Style TargetType="{x:Type ComboBox}" x:Key="ComboBoxStyle">
             <Setter Property="Foreground" Value="#333"/>
@@ -287,11 +285,42 @@
 
         <Style TargetType="{x:Type TextBox}" x:Key="TextBoxStyle">
             <Setter Property="Foreground" Value="#333"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Padding" Value="6,2"/>
+            <Setter Property="Padding" Value="2,2,2,2"/>
             <Setter Property="BorderBrush" Value="#C5CAD5"/>
-            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Background" Value="White"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TextBox}">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          VerticalAlignment="Top"
+                                          Focusable="False"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Hidden"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.56" TargetName="Bd"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="BorderBrush" Value="#7EB4EA" TargetName="Bd"/>
+                            </Trigger>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="#569DE5" TargetName="Bd"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+
         </Style>
 
         <Style TargetType="{x:Type Button}" x:Key="SmallButtonStyle">
@@ -323,7 +352,6 @@
                 </Setter.Value>
             </Setter>
         </Style>
-
 
         <!-- Стиль вложенной таблицы исполнений/состояний -->
         <Style x:Key="NestedScanDataGridStyle" TargetType="{x:Type DataGrid}">
@@ -362,7 +390,209 @@
             </Setter>
         </Style>
 
+        <!-- ====================== TAB CONTROL ====================== -->
+        <Style TargetType="{x:Type TabControl}" x:Key="TabControlStyle">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,0"/>
+            <Setter Property="Padding" Value="0,0,0,0"/>
+            <Setter Property="TabStripPlacement" Value="Top"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabControl}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <!-- Заголовки вкладок -->
+                            <TabPanel x:Name="HeaderPanel"
+                              Background="Transparent"
+                              IsItemsHost="True"
+                              Panel.ZIndex="1"
+                              Margin="5,0,5,0"
+                              HorizontalAlignment="Stretch"/>
 
+                            <!-- Содержимое -->
+                            <Border x:Name="ContentBorder"
+                            Background="White"
+                            BorderBrush="#C5CAD5"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Margin="2,-1,2,0" VerticalAlignment="Stretch" Grid.Row="1">
+                                <ContentPresenter x:Name="PART_SelectedContentHost"
+                                          ContentSource="SelectedContent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ====================== TAB ITEM ====================== -->
+        <Style TargetType="{x:Type TabItem}" x:Key="TabItemStyle">
+            <Setter Property="Foreground" Value="#444"/>
+            <Setter Property="Padding" Value="10,10,10,10"/>
+            <Setter Property="Margin" Value="2,0,2,0"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type TabItem}">
+                        <Border x:Name="Border"
+                        Background="{TemplateBinding Background}"
+                        BorderBrush="Transparent"
+                        BorderThickness="1,1,1,0"
+                        CornerRadius="6,6,0,0"
+                        MinHeight="25" Margin="0,0,4,0" Padding="8,2,8,2"
+                        >
+                            <ContentPresenter x:Name="ContentSite"
+                                      ContentSource="Header"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      RecognizesAccessKey="True" Margin="0,0,0,0"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <!-- Активная вкладка -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="White"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#C5CAD5"/>
+                                <Setter Property="Foreground" Value="#FF000000"/>
+                                <Setter TargetName="Border" Property="Panel.ZIndex" Value="1"/>
+                                <Setter Property="Cursor" Value="Arrow"/>
+                            </Trigger>
+
+                            <!-- Наведение мыши -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#F8FAFF"/>
+                            </Trigger>
+
+                            <!-- Активная + Наведение -->
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="True"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="Border" Property="Background" Value="White"/>
+                            </MultiTrigger>
+
+                            <!-- Неактивное состояние -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="#A0A0A0"/>
+                            </Trigger>
+
+
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="IsSelected" Value="False"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </MultiTrigger>
+
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ====================== LISTBOX ====================== -->
+        <Style TargetType="{x:Type ListBox}" x:Key="ListBoxStyle">
+            <Setter Property="Foreground" Value="#333"/>
+            <Setter Property="Padding" Value="3,3,3,3"/>
+            <Setter Property="BorderBrush" Value="#C5CAD5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBox}">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+
+                            <ScrollViewer 
+                                Focusable="False"
+                                HorizontalScrollBarVisibility="Auto"
+                                VerticalScrollBarVisibility="Auto">
+                                <ItemsPresenter 
+                                    KeyboardNavigation.DirectionalNavigation="Contained"
+                                    SnapsToDevicePixels="True"/>
+                            </ScrollViewer>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <!-- Неактивный -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.56"/>
+                            </Trigger>
+
+                            <!-- Наведение мыши -->
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#7EB4EA"/>
+                            </Trigger>
+
+                            <!-- Фокус -->
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#569DE5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ====================== LISTBOX ITEM ====================== -->
+        <Style TargetType="{x:Type ListBoxItem}" x:Key="ListBoxItemStyle">
+            <Setter Property="Padding" Value="8,6,8,6"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="MinHeight" Value="30"/>
+
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Padding="{TemplateBinding Padding}">
+
+                            <ContentPresenter 
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True"/>
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+                            <!-- Активный элемент -->
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#E5F0FF"/>
+                                <Setter Property="Foreground" Value="#333"/>
+                            </Trigger>
+
+                            <!-- Наведение -->
+                            <Trigger Property="IsMouseOver" Value="True" SourceName="Border">
+                                <Setter TargetName="Border" Property="Background" Value="#F0F5FF"/>
+                            </Trigger>
+
+                            <!-- Неактивный -->
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.56"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
     </Window.Resources>
 
@@ -445,9 +675,12 @@
             </Grid>
 
             <!-- Основное содержимое окна -->
-            <TabControl x:Name="MainTabControl" Grid.Row="1" Margin="0,1,0,0">
+            <TabControl x:Name="MainTabControl" Grid.Row="1" 
+                        Style="{StaticResource TabControlStyle}"
+                        ItemContainerStyle="{StaticResource TabItemStyle}"
+                        Margin="0,1,0,0">
                 <TabItem x:Name="HomeTab" Header="Главная">
-                    <Grid Background="WhiteSmoke">
+                    <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
@@ -843,7 +1076,7 @@
                     </Grid>
                 </TabItem>
 
-                <TabItem x:Name="SettingsTab" Header="Настройки" Height="20" VerticalAlignment="Top">
+                <TabItem x:Name="SettingsTab" Header="Настройки">
                     <Grid Margin="10,10,10,10" Grid.Row="1">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -905,25 +1138,6 @@
                                     Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"
                                     HorizontalAlignment="Left"/>
 
-                                <Expander Header="Ссылка на таблицу соответствия" Grid.Row="1" 
-                                          Margin="5,0,5,3">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <TextBox x:Name="TablePath" TextWrapping="Wrap"
-                                                 TextChanged="TablePath_TextChanged" VerticalContentAlignment="Center" 
-                                                 ToolTipService.InitialShowDelay="400"
-                                                 Margin="5,5,5,5" Height="20"/>
-                                        <Button x:Name="browseButton" Content="Обзор" Width="60" 
-                                                HorizontalAlignment="Left" Height="20" Click="browseButton_Click" 
-                                                ToolTip="Выбор файла Excel"
-                                                ToolTipService.InitialShowDelay="400"
-                                                Grid.Row="1" Margin="5,0,0,0"/>
-                                    </Grid>
-                                </Expander>
-
                             </Grid>
                         </GroupBox>
 
@@ -937,11 +1151,12 @@
                             <StackPanel>
 
                                 <ComboBox x:Name="templateComboBox" 
-                                  ItemsSource="{x:Static const:MaskConst.AllFields}"
-                                  SelectedIndex="0" SelectionChanged="templateComboBox_SelectionChanged"
-                                  ToolTip="Выбор шаблона"
-                                  ToolTipService.InitialShowDelay="400"
-                                  Width="150" Height="22" HorizontalAlignment="Left" Margin="3,3,0,5"/>
+                                          Style="{StaticResource ComboBoxStyle}"
+                                          ItemsSource="{x:Static const:MaskConst.AllFields}"
+                                          SelectedIndex="0" SelectionChanged="templateComboBox_SelectionChanged"
+                                          ToolTip="Выбор шаблона"
+                                          ToolTipService.InitialShowDelay="400"
+                                          Width="150" Height="22" HorizontalAlignment="Left" Margin="3,3,0,5"/>
 
                                 <Grid x:Name="gridSettings" IsEnabled="False">
                                     <Grid.ColumnDefinitions>
@@ -952,14 +1167,15 @@
 
                                     <StackPanel Grid.Column="0" VerticalAlignment="Top">
                                         <ListBox x:Name="AvailableList"
-                                             ItemsSource="{Binding AvailableHeaders}"
-                                             AllowDrop="True"
-                                             PreviewMouseLeftButtonDown="AvailableList_PreviewMouseLeftButtonDown"
-                                             PreviewMouseMove="AvailableList_PreviewMouseMove"
-                                             Drop="AvailableList_Drop"
-                                             SelectionMode="Single" 
-                                             MouseDoubleClick="AvailableList_MouseDoubleClick" 
-                                             Height="130" VerticalAlignment="Top">
+                                                 Style="{StaticResource ListBoxStyle}"
+                                                 ItemsSource="{Binding AvailableHeaders}"
+                                                 AllowDrop="True"
+                                                 PreviewMouseLeftButtonDown="AvailableList_PreviewMouseLeftButtonDown"
+                                                 PreviewMouseMove="AvailableList_PreviewMouseMove"
+                                                 Drop="AvailableList_Drop"
+                                                 SelectionMode="Single" 
+                                                 MouseDoubleClick="AvailableList_MouseDoubleClick" 
+                                                 Height="130" VerticalAlignment="Top">
 
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
@@ -977,6 +1193,7 @@
                                                        Text="Пользовательский текст:" HorizontalAlignment="Left" 
                                                        Margin="0,0,0,3" Visibility="Collapsed"/>
                                             <Button DockPanel.Dock="Right"
+                                                    Style="{StaticResource SmallButtonStyle}"
                                                 Content="Добавить →" 
                                                 Width="90"
                                                 ToolTip="Добавить текст в правый список"
@@ -984,6 +1201,7 @@
                                                 Click="AddCustomText_Click"/>
 
                                             <TextBox x:Name="txtCustomText"
+                                                     Style="{StaticResource TextBoxStyle}"
                                                  Text="{Binding CustomText}"
                                                  TextChanged="TxtCustomText_TextChanged"
                                                  ToolTip="Ввод пользовательского текста"
@@ -995,39 +1213,45 @@
                                     <StackPanel Grid.Column="1" 
                                             Margin="10,0,10,0" VerticalAlignment="Top">
                                         <Button Content="⯈" Click="AddFromLeft_Click" Margin="0,0,0,5" Width="20" Height="20"
-                                            ToolTip="Добавить элемент"
-                                            ToolTipService.InitialShowDelay="400"
-                                            />
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                ToolTip="Добавить элемент"
+                                                ToolTipService.InitialShowDelay="400"
+                                                />
                                         <Button Content="⯇" Click="RemoveSelected_Click" Margin="0,0,0,5" Height="20"
-                                            ToolTip="Удалить элемент"
-                                            ToolTipService.InitialShowDelay="400"
-                                            Width="20"/>
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                ToolTip="Удалить элемент"
+                                                ToolTipService.InitialShowDelay="400"
+                                                Width="20"/>
                                         <Separator/>
                                         <Button Content="⯅" Click="MoveUp_Click" Margin="0,5,0,5" Height="20"
-                                            ToolTip="Переместить элемент вверх" 
-                                            ToolTipService.InitialShowDelay="400"
-                                            Width="20"/>
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                ToolTip="Переместить элемент вверх" 
+                                                ToolTipService.InitialShowDelay="400"
+                                                Width="20"/>
                                         <Button Content="⯆" Click="MoveDown_Click" Margin="0,0,0,5" Height="20"
-                                            ToolTip="Переместить элемент вниз"
-                                            ToolTipService.InitialShowDelay="400"
-                                            Width="20"/>
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                ToolTip="Переместить элемент вниз"
+                                                ToolTipService.InitialShowDelay="400"
+                                                Width="20"/>
                                         <Separator/>
                                         <Button Content="X" Click="ClearMaskParts_Click" Width="20" 
-                                            Height="20" Margin="0,5,0,0"
-                                            ToolTip="Очистить список"
-                                            ToolTipService.InitialShowDelay="400"
-                                            />
+                                                Style="{StaticResource SmallButtonStyle}"
+                                                Height="20" Margin="0,5,0,0"
+                                                ToolTip="Очистить список"
+                                                ToolTipService.InitialShowDelay="400"
+                                                />
                                     </StackPanel>
                                     <ListBox x:Name="SelectedList"
-                                         AllowDrop="True"
-                                         PreviewMouseLeftButtonDown="SelectedList_PreviewMouseLeftButtonDown"
-                                         PreviewMouseMove="SelectedList_PreviewMouseMove"
-                                         Drop="SelectedList_Drop"
-                                         SelectionMode="Single" 
-                                         MouseDoubleClick="SelectedList_MouseDoubleClick" 
-                                         Grid.Column="2"
-                                         ItemsSource="{Binding MaskParts}" 
-                                         ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                             Style="{StaticResource ListBoxStyle}"
+                                             AllowDrop="True"
+                                             PreviewMouseLeftButtonDown="SelectedList_PreviewMouseLeftButtonDown"
+                                             PreviewMouseMove="SelectedList_PreviewMouseMove"
+                                             Drop="SelectedList_Drop"
+                                             SelectionMode="Single" 
+                                             MouseDoubleClick="SelectedList_MouseDoubleClick" 
+                                             Grid.Column="2"
+                                             ItemsSource="{Binding MaskParts}" 
+                                             ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
                                         <ListBox.ItemTemplate>
                                             <DataTemplate>
@@ -1059,7 +1283,7 @@
                 </TabItem>
 
                 <TabItem Header="Логи">
-                    <Grid Background="WhiteSmoke">
+                    <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>

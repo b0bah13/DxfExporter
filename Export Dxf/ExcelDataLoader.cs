@@ -14,6 +14,8 @@ using Color = System.Drawing.Color;
 
 namespace DxfExporter.Export_Dxf
 {
+    // Заменено NsiDataLoader
+
     /// <summary>
     /// Класс для загрузки и кэширования данных из Excel-файла.
     /// </summary>

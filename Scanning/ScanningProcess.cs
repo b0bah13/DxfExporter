@@ -952,8 +952,8 @@ namespace DxfExporter.Scanning
             double flatWidth = sheetMetalCompDef.FlatPattern.Width*10;
             double flatLength = sheetMetalCompDef.FlatPattern.Length*10;
 
-            var dataTable = ExcelDataLoader.GetInstance(CheckSettings.PathTable)
-                .GetDataFromPathTable(material, thickness);
+            //var dataTable = ExcelDataLoader.GetInstance(CheckSettings.PathTable).GetDataFromPathTable(material, thickness);
+            var dataTable = NsiDataLoader.GetInstance().GetDataFromNsi(material, thickness);
 
             if (dataTable.ListLength == 0 || dataTable.ListWidth == 0) return (false,true);
 

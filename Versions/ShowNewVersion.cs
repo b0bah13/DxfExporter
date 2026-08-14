@@ -11,7 +11,19 @@ namespace DxfExporter.Versions
     {
         // Путь до папки с отчётами
         private const string DirectPath = @"K:\Автоматизация процессов\Report\Обновления";
-        
+
+        /// <summary>
+        /// Извлекает первые три компонента версии (Major.Minor.Build), игнорируя Revision.
+        /// Например, "1.0.2.1" → "1.0.2", "1.1.0.0" → "1.1.0".
+        /// </summary>
+        private static string GetMajorMinorBuild(string version)
+        {
+            var parts = version.Split('.');
+            if (parts.Length >= 3)
+                return $"{parts[0]}.{parts[1]}.{parts[2]}";
+            return version;
+        }
+
         /// <summary>
         /// Проверяет, нужно ли показать уведомление об обновлении пользователю.
         /// </summary>
@@ -68,6 +80,9 @@ namespace DxfExporter.Versions
 
                 versions = table[0]; // обновляем на случай добавления
 
+                // Текущая версия по первым трём компонентам (Major.Minor.Build)
+                string currentMmb = GetMajorMinorBuild(currentVersion);
+
                 // Строим структуру версия, список пользователей
                 Dictionary<string, HashSet<string>> versionToUsers = new(StringComparer.OrdinalIgnoreCase);
                 
@@ -88,11 +103,19 @@ namespace DxfExporter.Versions
                     versionToUsers[ver] = users;
                 }
 
-                // проверка
+                // Проверка непросмотренных версий
+                // Исключаем старые версии, которые отличаются от текущей только в Revision —
+                // для пользователя они не являются обновлением.
+                // Текущая версия считается непросмотренной только если в журнале
+                // нет другой версии с тем же Major.Minor.Build.
+                bool mmbExistsInJournal = versions
+                    .Any(v => v != currentVersion && GetMajorMinorBuild(v) == currentMmb);
+
                 List<string> unseenVersions = versions
                     .Where(ver => !versionToUsers[ver].Contains(userName))
+                    .Where(ver => GetMajorMinorBuild(ver) != currentMmb || (ver == currentVersion && !mmbExistsInJournal))
                     .ToList();
-
+                
                 bool needToShow = unseenVersions.Count > 0;
 
                 // если нужно показать, то добавить пользователя в столбцы

@@ -44,7 +44,6 @@ namespace DxfExporter
     {
         #region Объявление переменных
         
-        const string defaultPathTable = @"K:\Документы\Инструкции\Автоматизация процессов\Таблица соответствия.xlsx";
         private static readonly string SettingsFilePath = Path.Combine(Path.GetTempPath(), "DxfExporter", "settings-tab-state.json");
 
         private CancellationTokenSource _cts;
@@ -101,7 +100,6 @@ namespace DxfExporter
         public class CheckFileSettings
         { 
             public bool CheckGab { get; set; } = true;
-            public string PathTable { get; set; } = defaultPathTable;
             public bool ScanAllIpart { get; set; } = false;
 
         }
@@ -118,7 +116,6 @@ namespace DxfExporter
             public bool CategorizeThickness { get; set; } = true;
             public bool CheckGab { get; set; } = true;
             public bool ScanAllIpart { get; set; } = false;
-            public string? TablePath { get; set; }
             public string? TemplateMode { get; set; }
             public string? CustomText { get; set; }
             public List<string> MaskParts { get; set; } = new List<string>();
@@ -198,7 +195,6 @@ namespace DxfExporter
 
             //DataContext = this;
             DataContext = MaskVm;
-            TablePath.Text = defaultPathTable;
             AppVersion = GetAppVersion();   // или просто присвоить строку
 
             UpdateTooltip();
@@ -584,25 +580,8 @@ namespace DxfExporter
             switch (tBox?.Name)
             {
                 case "TablePath":
-                    TextBoxProc(tBox, defaultPathTable);
+                    //TextBoxProc(tBox, defaultPathTable);
                     SaveSettingsTabState();
-                    break;
-            }
-        }
-        
-        /// <summary>
-        /// Кнопка обзор
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void browseButton_Click(object sender, RoutedEventArgs e)
-        {
-            Button? button = sender as Button;
-
-            switch (button?.Name)
-            {
-                case "browseButton":
-                    TablePath.Text = SelectExcel(@"K:\Документы\Инструкции\Автоматизация процессов\");
                     break;
             }
         }
@@ -815,7 +794,6 @@ namespace DxfExporter
             categorizeThickness.IsChecked = true;
             checkGab.IsChecked = true;
             scanAllIpart.IsChecked = false;
-            TablePath.Text = defaultPathTable;
             templateComboBox.SelectedIndex = 0;
             //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
         }
@@ -2239,67 +2217,6 @@ namespace DxfExporter
         }
         
         /// <summary>
-        /// Обработка логики в текстовом поле
-        /// </summary>
-        /// <param name="tBox"></param>
-        /// <param name="defpath"></param>
-        /// <param name="path"></param>
-        private void TextBoxProc(TextBox tBox, string defpath)
-        {
-            if (string.IsNullOrEmpty(tBox.Text))
-            {
-                tBox.Text = defpath;
-                CheckSettings.PathTable = defpath;
-                return;
-            }
-
-            if (!System.IO.File.Exists(tBox.Text))
-            {
-                MessageBox.Show("Указанного файла не существует!\nБудет выбран стандартный файл таблицы соответствия.",
-                    "Ошибка выбора файла", MessageBoxButton.OK, MessageBoxImage.Error);
-                tBox.Text = defpath;
-                CheckSettings.PathTable = defpath;
-            }
-            else
-            {
-                CheckSettings.PathTable = tBox.Text;
-            }
-        }
-
-        /// <summary>
-        /// Выбор файла Excel
-        /// </summary>
-        /// <param name="initialDirectory">Первичная папка поиска</param>
-        /// <returns></returns>
-        private string SelectExcel(string initialDirectory)
-        {
-            string originalText = TablePath.Text;
-
-            // Создаем экземпляр OpenFileDialog
-            OpenFileDialog openFileDialog = new OpenFileDialog();
-
-            // Устанавливаем начальный каталог
-            openFileDialog.InitialDirectory = initialDirectory;
-
-            // Устанавливаем фильтр для отображения только Excel-файлов
-            openFileDialog.Filter = "Все файлы Excel (*.xlsx;*.xlsm;*.xls)|*.xlsx;*.xlsm;*.xls";
-
-            openFileDialog.Multiselect = false;
-
-            // Устанавливаем заголовок окна
-            openFileDialog.Title = "Выберите Excel файл";
-
-            // Показываем диалоговое окно и проверяем результат
-            string filePath = openFileDialog.ShowDialog() == true
-                ?
-                // Получаем выбранный путь к файлу
-                openFileDialog.FileName
-                : originalText;
-
-            return filePath;
-        }
-
-        /// <summary>
         /// Процесс для добавления открытых файлов.
         /// </summary>
         private async void StartAddFiles(CallSource callSource)
@@ -3454,10 +3371,6 @@ namespace DxfExporter
                 scanAllIpart.IsChecked = state.ScanAllIpart;
                 //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
 
-                string tablePath = string.IsNullOrWhiteSpace(state.TablePath) ? defaultPathTable : state.TablePath;
-                TablePath.Text = File.Exists(tablePath) ? tablePath : defaultPathTable;
-                CheckSettings.PathTable = TablePath.Text;
-
                 if (!string.IsNullOrWhiteSpace(state.TemplateMode))
                 {
                     templateComboBox.SelectedItem = state.TemplateMode;
@@ -3512,7 +3425,6 @@ namespace DxfExporter
                     CategorizeThickness = categorizeThickness?.IsChecked == true,
                     CheckGab = checkGab?.IsChecked == true,
                     ScanAllIpart =  scanAllIpart?.IsChecked == true,
-                    TablePath = TablePath?.Text ?? string.Empty,
                     TemplateMode = templateComboBox?.SelectedItem?.ToString(),
                     CustomText = txtCustomText?.Text ?? string.Empty,
                     MaskParts = MaskVm.MaskParts

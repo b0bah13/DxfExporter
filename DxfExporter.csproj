@@ -10,7 +10,7 @@
 	  <Platforms>AnyCPU;x64</Platforms>
 	  <AssemblyName>Dxf Exporter</AssemblyName>
 	  <Description>Программа для получения Dxf развёрток из файлов Inventor</Description>
-	  <AssemblyVersion>1.0.4.0</AssemblyVersion>
+	  <AssemblyVersion>1.0.4.1</AssemblyVersion>
 	  <Version>1.0.0</Version>
 	  <SignAssembly>False</SignAssembly>
 	  <Company>ООО «СЗЭМО ЗАВОД ВЕНТИЛЯТОР ТДМ»</Company>
@@ -58,6 +58,9 @@
       <HintPath>C:\Program Files (x86)\Microsoft Visual Studio\Shared\Visual Studio Tools for Office\PIA\Office15\Microsoft.Office.Interop.Outlook.dll</HintPath>
       <EmbedInteropTypes>True</EmbedInteropTypes>
       <Private>False</Private>
+    </Reference>
+    <Reference Include="Nsi.Client">
+      <HintPath>..\..\..\Inventor 26\Ilogic\dll\Nsi.Client.dll</HintPath>
     </Reference>
   </ItemGroup>
 
