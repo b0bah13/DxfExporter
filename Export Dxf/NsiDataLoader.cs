@@ -56,7 +56,8 @@ namespace DxfExporter.Export_Dxf
             using var client = new NsiClient(configuration);
             var filter = new NsiViewFilter
             {
-                Group = "Лист"
+                Group = "Лист",
+                ActiveOnly = true
             };
             var materials = client.GetAllMainMaterialsAsync(filter).GetAwaiter().GetResult();
             
