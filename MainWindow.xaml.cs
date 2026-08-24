@@ -2894,6 +2894,7 @@ namespace DxfExporter
                         structureClass.RowColor = System.Windows.Media.Brushes.Thistle;
                         break;
                     case ErrorsConst.ErrorCreateDxf:
+                    case ErrorsConst.WrongFileName:
                         structureClass.RowColor = System.Windows.Media.Brushes.LightCoral;
                         break;
                 }

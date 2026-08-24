@@ -265,7 +265,19 @@ namespace DxfExporter.Export_Dxf
 
                         //Получение имени файла из выбранной маски выгрузки
                         string fileName = ApplyMask(ctx.MaskData, fileStructure) + ".dxf";
-                        
+
+                        bool hasAnyKey = CommonOperations.ReplaceDictionary.Keys.Any(key => fileName.Contains(key));
+                        if (hasAnyKey)
+                        {
+                            _mainWindow.UpdateLog($"Не корректное имя файла: {fileName}");
+                            _mainWindow.MinusProgress(_percent);
+                            _mainWindow.ChangeColor(fileStructure, ErrorsConst.WrongFileName);
+                            continue;
+                        }
+                        //замена запрещёных символов через словарь
+                        //fileName = CommonOperations.ReplaceDictionarySimple
+                        //.Aggregate(fileName, (current, kvp) => current.Replace(kvp.Key, kvp.Value));
+
                         //Выгрузить dxf
                         ExportDxf();
 

@@ -16,6 +16,7 @@ namespace DxfExporter.Constants
         public const string DxfIntersections = "Проверьте пересечение линий в dxf";
         public const string ErrorCreateDxf = "Не удалось создать dxf";
         public const string LibraryFile = "Файл из библиотеки";
+        public const string WrongFileName = "Не корректное имя файла";
     }
 
 }
