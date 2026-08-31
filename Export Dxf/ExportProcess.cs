@@ -28,6 +28,7 @@ using static DxfExporter.MainWindow;
 using IoFile = System.IO.File;
 using DrawingColor = System.Drawing.Color;
 using DrawingPen = System.Drawing.Pen;
+using Environment = System.Environment;
 using Path = System.IO.Path;
 
 namespace DxfExporter.Export_Dxf
@@ -78,9 +79,14 @@ namespace DxfExporter.Export_Dxf
         /// </summary>
         public int UnloadCount { get; }
 
+        /// <summary>
+        /// Необходимость гравировки
+        /// </summary>
+        public EngravingSettings Engraving { get; }
+
         public ExportContext(Inventor.Application invApp, ObservableCollection<StructureClass> procData,
             ObservableCollection<MaskPart> maskData, string modeName, CancellationToken cancellationToken,
-            string scanFilePath, ExportSettings folderSettings, int unloadCount)
+            string scanFilePath, ExportSettings folderSettings, int unloadCount, EngravingSettings engraving)
         {
             InvApp = invApp ?? throw new ArgumentNullException(nameof(invApp));
             ProcData = procData ?? throw new ArgumentNullException(nameof(procData));
@@ -90,6 +96,7 @@ namespace DxfExporter.Export_Dxf
             ScanFilePath = scanFilePath;
             FolderSettings = folderSettings;
             UnloadCount = unloadCount;
+            Engraving = engraving;
         }
     }
 
@@ -134,13 +141,13 @@ namespace DxfExporter.Export_Dxf
         /// <param name="maskData">Маска/фильтры выгрузки</param>
         public async Task<List<string>> StartProcessExport(CancellationToken cancellationToken, ObservableCollection<StructureClass> procData,
             ObservableCollection<MaskPart> maskData, string modeName, string scanFilePath, ExportSettings folderSettings,
-             int unloadCount)
+             int unloadCount, EngravingSettings engraving)
         {
             return await InventorHost.Instance.Value.RunAsync(async invApp =>
             {
                 var context = new ExportContext(invApp, procData, maskData,
-                    modeName, cancellationToken, scanFilePath, folderSettings, unloadCount);
-
+                    modeName, cancellationToken, scanFilePath, folderSettings, unloadCount, engraving);
+                
                 var dir = ExportProcessing(context);
 
                 if (_mainWindow.CheckExit.NeedExit)
@@ -171,6 +178,8 @@ namespace DxfExporter.Export_Dxf
 
             try
             {
+                ctx.InvApp.SilentOperation = true;
+
                 //если папка для каждого файла, то не добавляем исходный путь
                 if (!ctx.FolderSettings.ForEachDocDirect)
                 {
@@ -214,7 +223,11 @@ namespace DxfExporter.Export_Dxf
 
                     bool wasOpened = false;
 
-                    PartDocument pDoc = CommonOperations.GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
+                    // Если гравировка нужна, то нужно открывать документ, что бы он был активным
+                    PartDocument pDoc =  ctx.Engraving.NeedEngraving 
+                        ? CommonOperations.GetVisibleOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened) 
+                        : CommonOperations.GetOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
+                    
                     if (pDoc == null)
                         throw new Exception("Не удалось получить PartDocument.");
 
@@ -225,7 +238,6 @@ namespace DxfExporter.Export_Dxf
                         //Если деталь через состояние, то нужно переключить на состояние которое было отсканировано
                         if (fileStructure.IsModelStatePart)
                         {
-                            ctx.InvApp.SilentOperation = true;
                             //pDoc = CommonOperations.NeedOpenedFile(ctx.InvApp, fileStructure.Path, out wasOpened);
                             pDoc = CommonOperations.GetVisibleOrOpenPartDocument(ctx.InvApp, fileStructure.Path, out wasOpened);
                             sheetMetalCompDef = (SheetMetalComponentDefinition)pDoc.ComponentDefinition;
@@ -239,17 +251,18 @@ namespace DxfExporter.Export_Dxf
                             }
                         }
 
-                        //проверка детали, есть ли развёртка
+                        // Проверка детали, есть ли развёртка
                         var createResult = CreateFlat(fileStructure, sheetMetalCompDef);
                         //если пропущена обработка переходим к следующей детали
                         if (createResult.skip)
                         {
                             continue;
                         }
-                        //если создана развёртка предложить создать гравировку
-                        if (createResult.create) 
+
+                        // Создаём гравировку, если параметр был включен
+                        if (ctx.Engraving.NeedEngraving) 
                         {
-                            AddGrav(ctx, pDoc, fileStructure);
+                            AddGrav(ctx, pDoc);
                         }
 
                         //провести сверку материала и толщины - речь про нержу 0,7 => 0,8
@@ -453,6 +466,7 @@ namespace DxfExporter.Export_Dxf
                         //если сканируемый файл не совпадает с деталью выгрузки и был открыт, то закрываем его
                         if (pDoc.FullFileName != ctx.ScanFilePath && wasOpened)
                         {
+                            pDoc.Close(true);
                             CommonOperations.ReleaseObject(pDoc);
                         }
                     }
@@ -1082,40 +1096,25 @@ namespace DxfExporter.Export_Dxf
         }
         
         /// <summary>
-        /// Метод для добавления гравировки через ilogic
+        /// Метод для добавления гравировки через addin
         /// </summary>
         /// <param name="ctx">Класс контекст</param>
         /// <param name="pDoc">Обрабатываемый документы</param>
-        /// <param name="fileStructure">Структура файла</param>
-        private void AddGrav(ExportContext ctx, PartDocument pDoc, StructureClass fileStructure)
+        private void AddGrav(ExportContext ctx, PartDocument pDoc)
         {
-            MessageBoxResult userResult = MessageBoxResult.None;
+            string addinClsid = "{85b34a87-87d9-4cd1-b16d-2c19fdf1d568}";
+            ApplicationAddIn? addIn = ctx.InvApp.ApplicationAddIns.Cast<ApplicationAddIn>()
+                .FirstOrDefault(ai => ai.ClientId.Contains(addinClsid, StringComparison.InvariantCultureIgnoreCase));
 
-            _mainWindow.Dispatcher.Invoke(() =>
-            {
-                userResult = MessageBox.Show(_mainWindow,
-                    $"Создать гравировку в детали:\n{fileStructure.DisplayName}",
-                    "Добавить гравировку?",
-                    MessageBoxButton.YesNo, MessageBoxImage.Question);
-            });
+            if (addIn == null) return;
+            if (!addIn.Activated) addIn.Activate();
 
-            if (userResult == MessageBoxResult.Yes)
-            {
-                // Получаем iLogic Automation через AddIn
-                ApplicationAddIn iLogicAddIn = ctx.InvApp.ApplicationAddIns.ItemById["{3BDD8D79-2179-4B11-8A5A-257B1C0263AC}"];
-
-                if (!iLogicAddIn.Activated)
-                {
-                    iLogicAddIn.Activate();
-                }
-                // Важно: используем dynamic, потому что точный интерфейс IiLogicAutomation
-                // не всегда доступен без специальной ссылки на Autodesk.iLogic.Interfaces
-                dynamic iLogicAuto = iLogicAddIn.Automation;
-                
-                // Запуск внешнего правила
-                // ruleName — это имя файла без расширения .iLogicVb или просто имя правила
-                iLogicAuto.RunExternalRule(pDoc, "Гравировка");
-            }
+            // Получаем Automation
+            dynamic addinAutomation = addIn.Automation;
+            if (addinAutomation == null) return;
+            
+            //имя метода в Addin и аргументы для него
+            addinAutomation.DoAction("StartEngraving", pDoc, ctx.Engraving.OrderNumber);
         }
 
         /// <summary>

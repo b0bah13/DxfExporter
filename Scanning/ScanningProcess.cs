@@ -306,23 +306,29 @@ namespace DxfExporter.Scanning
         private int GetCount(AssemblyDocument assemDoc)
         {
             int count = 0;
-
-            //TODO: проверить корректность получения кол-ва. В Occurrences.Count входят дубликаты. Правильнее сделано в BOM-Report
+            HashSet<string> HsFilePath = new HashSet<string>();
 
             void CountRecursive(AssemblyDocument asm)
             {
-                count += asm.ComponentDefinition.Occurrences.Count;
-
-                foreach (var occ in asm.ComponentDefinition.Occurrences.Cast<ComponentOccurrence>()
-                             .Where(occ => occ.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject))
+                foreach (ComponentOccurrence occurrence in asm.ComponentDefinition.Occurrences)
                 {
-                    if (occ.Excluded || occ.Suppressed) continue;
-                    if (occ.ReferencedDocumentDescriptor is { ReferenceMissing: true }) continue;
+                    if (occurrence.Excluded || occurrence.Suppressed) continue;
+                    if (occurrence.ReferencedDocumentDescriptor is { ReferenceMissing: true }) continue;
 
-                    //Пропускать сварные сборки
-                    if (occ.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
-                    
-                    CountRecursive((AssemblyDocument)occ.Definition.Document);
+                    string filePath = (occurrence.Definition.Document as Document).FullFileName;
+
+                    if (HsFilePath.Contains(filePath)) continue;
+
+                    count++;
+                    HsFilePath.Add(filePath);
+
+                    if (occurrence.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject)
+                    {
+                        //Пропускать сварные сборки
+                        if (occurrence.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
+
+                        CountRecursive((AssemblyDocument)occurrence.Definition.Document);
+                    }
                 }
             }
 

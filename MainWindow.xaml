@@ -1082,6 +1082,7 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
 
@@ -1141,9 +1142,26 @@
                             </Grid>
                         </GroupBox>
 
+                        <GroupBox x:Name="gbNeedEngraving" Header="Гравировка" Grid.Row="3" 
+                                  HorizontalAlignment="Left" Width="600">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <CheckBox x:Name="needEngraving" 
+                                          Margin="5,3,5,5" IsChecked="False" 
+                                          ToolTipService.InitialShowDelay="400"
+                                          Content="Гравировать при выгрузке" 
+                                          Checked="processCheckBox_Checked" Unchecked="processCheckBox_Checked"
+                                          HorizontalAlignment="Left"/>
+                            </Grid>
+                        </GroupBox>
+
                         <!-- Основная область (будет отключаться при Стандарт / Материал) -->
                         <GroupBox x:Name="gbMaskSettings"
-                                  Grid.Row="3" Header="Шаблон имени файла" 
+                                  Grid.Row="4" Header="Шаблон имени файла" 
                                   Margin="0,5,0,0"
                                   
                                   Width="600" HorizontalAlignment="Left" VerticalAlignment="Top">
@@ -1156,7 +1174,7 @@
                                           SelectedIndex="0" SelectionChanged="templateComboBox_SelectionChanged"
                                           ToolTip="Выбор шаблона"
                                           ToolTipService.InitialShowDelay="400"
-                                          Width="150" Height="22" HorizontalAlignment="Left" Margin="3,3,0,5"/>
+                                          Width="150" Height="22" HorizontalAlignment="Left" Margin="0,3,0,5"/>
 
                                 <Grid x:Name="gridSettings" IsEnabled="False">
                                     <Grid.ColumnDefinitions>
@@ -1375,7 +1393,7 @@
                   Visibility="Collapsed"
                   Background="#01FFFFFF"
                   SnapsToDevicePixels="True"
-                  UseLayoutRounding="True">
+                  UseLayoutRounding="True" d:IsLocked="True">
                 <Canvas>
                     <Path x:Name="TourDimPath"
                           Fill="#B0000000"

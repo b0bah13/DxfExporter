@@ -71,7 +71,8 @@ namespace DxfExporter
         public StateWithMessage CheckExit = new StateWithMessage { };
         public ExportSettings FolderSettings = new ExportSettings();
         public CheckFileSettings CheckSettings = new CheckFileSettings();
-
+        public EngravingSettings EngravingParam = new EngravingSettings();
+        
         /// <summary>
         /// Перечисление для указания источника вызова. 
         /// </summary>
@@ -101,7 +102,12 @@ namespace DxfExporter
         { 
             public bool CheckGab { get; set; } = true;
             public bool ScanAllIpart { get; set; } = false;
+        }
 
+        public class EngravingSettings
+        {
+            public bool NeedEngraving { get; set; } = false;
+            public string OrderNumber { get; set; } = string.Empty;
         }
 
         /// <summary>
@@ -115,6 +121,7 @@ namespace DxfExporter
             public bool CategorizeMaterial { get; set; } = true;
             public bool CategorizeThickness { get; set; } = true;
             public bool CheckGab { get; set; } = true;
+            public bool NeedEngraving { get; set; } = false;
             public bool ScanAllIpart { get; set; } = false;
             public string? TemplateMode { get; set; }
             public string? CustomText { get; set; }
@@ -535,14 +542,15 @@ namespace DxfExporter
                         userDirect.IsChecked = false;
                     }
                     break;
-
                 case "checkGab":
                     CheckSettings.CheckGab = checkGab.IsChecked == true;
                     break;
                 case "scanAllIpart":
                     CheckSettings.ScanAllIpart = scanAllIpart.IsChecked == true;
                     break;
-                
+                case "needEngraving":
+                    EngravingParam.NeedEngraving = needEngraving.IsChecked == true;
+                    break;
             }
 
             UpdateTooltip();
@@ -793,6 +801,7 @@ namespace DxfExporter
             categorizeMaterial.IsChecked = true;
             categorizeThickness.IsChecked = true;
             checkGab.IsChecked = true;
+            needEngraving.IsChecked = false;
             scanAllIpart.IsChecked = false;
             templateComboBox.SelectedIndex = 0;
             //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
@@ -1606,9 +1615,17 @@ namespace DxfExporter
                 Tab = SettingsTab,
                 Target = gbCheckGab,
                 Title = "Проверка развёртки",
-                Description = "Включает проверку развёртки при выгрузке.\nДанные по листам берутся из 'Таблицы соответствия'."
+                Description = "Включает проверку развёртки при выгрузке.\nДанные по листам берутся из базы NSI."
             });
             //№16
+            _tourSteps.Add(new TourStep
+            {
+                Tab = SettingsTab,
+                Target = gbNeedEngraving,
+                Title = "Гравировка",
+                Description = "Включает создание гравировки при выгрузке."
+            });
+            //№17
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1616,7 +1633,7 @@ namespace DxfExporter
                 Title = "Шаблон имени",
                 Description = "Выберите шаблон имени файла DXF или настройте собственный."
             });
-            //№17
+            //№18
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1624,7 +1641,7 @@ namespace DxfExporter
                 Title = "Состав шаблона",
                 Description = "Перетаскивайте параметры и настраивайте порядок частей имени."
             });
-            //№18
+            //№19
             _tourSteps.Add(new TourStep
             {
                 Tab = SettingsTab,
@@ -1933,10 +1950,17 @@ namespace DxfExporter
                 var maskData = MaskVm.MaskParts;
                 var modeName = MaskVm.ModeName;
 
+                if (EngravingParam.NeedEngraving)
+                {
+                    var orderWpf = new InputOrderNumber();
+                    if (orderWpf.ShowDialog() != true) { return; }
+                    
+                    EngravingParam.OrderNumber = orderWpf.OrderNumber; 
+                }
 
                 ExportProcess _export = new ExportProcess(this);
                 _exportDir = await _export.StartProcessExport(_cts.Token, procData, maskData, modeName,
-                    _scanFilePath, FolderSettings, unloadCount);
+                    _scanFilePath, FolderSettings, unloadCount, EngravingParam);
 
                 if (CheckExit.NeedExit)
                 {
@@ -3344,6 +3368,13 @@ namespace DxfExporter
                     : "Сканирует только активное исполнение/состояние детали"; //Выключено
             }
 
+            if (needEngraving != null)
+            {
+                needEngraving.ToolTip = needEngraving?.IsChecked == true
+                    ? "При создании dxf будет создана гравировка" //Включено: 
+                    : "Гравировка создаваться не будет"; //Выключено
+            }
+
             //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
         }
 
@@ -3369,6 +3400,7 @@ namespace DxfExporter
                 categorizeMaterial.IsChecked = state.CategorizeMaterial;
                 categorizeThickness.IsChecked = state.CategorizeThickness;
                 checkGab.IsChecked = state.CheckGab;
+                needEngraving.IsChecked = state.NeedEngraving;
                 scanAllIpart.IsChecked = state.ScanAllIpart;
                 //TODO:При добавлении нового элемента на вкладке настройки добавить здесь
 
@@ -3425,6 +3457,7 @@ namespace DxfExporter
                     CategorizeMaterial = categorizeMaterial?.IsChecked == true,
                     CategorizeThickness = categorizeThickness?.IsChecked == true,
                     CheckGab = checkGab?.IsChecked == true,
+                    NeedEngraving = needEngraving?.IsChecked == true,
                     ScanAllIpart =  scanAllIpart?.IsChecked == true,
                     TemplateMode = templateComboBox?.SelectedItem?.ToString(),
                     CustomText = txtCustomText?.Text ?? string.Empty,
@@ -3472,7 +3505,7 @@ namespace DxfExporter
                         StartTour(1);
                         break;
                     case "1.0.1.2":
-                        StartTour(18);
+                        StartTour(19);
                         break;
                     case "1.0.2.0":
                         StartTour(14);
@@ -3482,6 +3515,9 @@ namespace DxfExporter
                         break;
                     case "1.0.4.0":
                         StartTour(11);
+                        break;
+                    case "1.0.5.0":
+                        StartTour(16);
                         break;
                 }
             }
