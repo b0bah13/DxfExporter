@@ -326,6 +326,7 @@ namespace DxfExporter.Scanning
                     {
                         //Пропускать сварные сборки
                         if (occurrence.Definition.Type == ObjectTypeEnum.kWeldsComponentDefinitionObject) continue;
+                        if (occurrence.Definition.Type == ObjectTypeEnum.kVirtualComponentDefinitionObject) continue;
 
                         CountRecursive((AssemblyDocument)occurrence.Definition.Document);
                     }
@@ -389,6 +390,9 @@ namespace DxfExporter.Scanning
                         _mainWindow.MinusProgress(_percent);
                         continue;
                     }
+
+                    // пропускать виртуальные детали
+                    if (componentOccurrence.Definition.Type == ObjectTypeEnum.kVirtualComponentDefinitionObject) continue;
 
                     // проверяем сборка или деталь
                     if (componentOccurrence.DefinitionDocumentType == DocumentTypeEnum.kAssemblyDocumentObject)
