@@ -493,9 +493,9 @@ namespace DxfExporter.Scanning
                 string baseMat = (string)GetPropertyValue(partDoc.PropertySets, "Inventor User Defined Properties",
                     "Основной материал", "N/A");
 
-                if (baseMat == "N/A" || baseMat.ToLower().Contains("лист"))
+                if (baseMat == "N/A" || baseMat.Contains("лист", StringComparison.OrdinalIgnoreCase))
                 {
-                    var check = CheckFlat(material, thick, sheetMetalCompDef);
+                    var check = CheckFlat(material, thick, sheetMetalCompDef, baseMat);
                     isBigFlat = check.BigFlat;
                     errorMatThick = check.errMatThick;
                 }
@@ -952,7 +952,8 @@ namespace DxfExporter.Scanning
         /// <returns>BigFlat = true - большая, не поместится, false - обычная, поместится.
         /// errMatThick = true - нет такого сочетания материала, толщины,
         /// оба false, если ошибка</returns>
-        private (bool BigFlat, bool errMatThick) CheckFlat(string material,double thickness, SheetMetalComponentDefinition sheetMetalCompDef)
+        private (bool BigFlat, bool errMatThick) CheckFlat(string material,double thickness, 
+            SheetMetalComponentDefinition sheetMetalCompDef, string baseMat)
         {
             if (!sheetMetalCompDef.HasFlatPattern || sheetMetalCompDef.FlatPattern?.MassProperties.Mass == 0)
             {
@@ -963,7 +964,7 @@ namespace DxfExporter.Scanning
             double flatLength = sheetMetalCompDef.FlatPattern.Length*10;
 
             //var dataTable = ExcelDataLoader.GetInstance(CheckSettings.PathTable).GetDataFromPathTable(material, thickness);
-            var dataTable = NsiDataLoader.GetInstance().GetDataFromNsi(material, thickness);
+            var dataTable = NsiDataLoader.GetInstance().GetDataFromNsi(material, thickness, baseMat);
 
             if (dataTable.ListLength == 0 || dataTable.ListWidth == 0) return (false,true);
 

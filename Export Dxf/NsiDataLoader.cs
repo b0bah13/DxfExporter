@@ -79,37 +79,57 @@ namespace DxfExporter.Export_Dxf
         /// </summary>
         /// <param name="checkMaterial"></param>
         /// <returns>Возвращает размеры листа</returns>
-        public (double ListWidth, double ListLength) GetDataFromNsi(string checkMaterial, double thickness)
+        public (double ListWidth, double ListLength) GetDataFromNsi(string checkMaterial, double thickness, string baseMat)
         {
             double listWidth = 0.0;
             double listLength = 0.0;
 
+            Regex rxThickness = new Regex(
+                @"^Лист\s+(\d+(?:[.,]\d+)?)\s*мм",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+            Regex rxSimpleSheet = new Regex(
+                @"^Лист\s+\d+(?:[.,]\d+)?\s*мм\s*$",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+            Regex rxSize = new Regex(
+                @"[хx]\s*(\d+)\s*[хx]\s*(\d+)",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+            bool baseMatIsSheet = baseMat.Contains("лист", StringComparison.OrdinalIgnoreCase);
+
             foreach (var pair in _structureList
-                         .Where(pair => checkMaterial.ToLower().Trim() == pair.Material.ToLower().Trim()))
+                         .Where(pair => string.Equals(checkMaterial.Trim(),
+                         pair.Material.Trim(),StringComparison.OrdinalIgnoreCase)))
             {
-                // Универсальное регулярное выражение для Лист и Часть листа
-                Regex regexUniversal = new Regex(
-                    @"^(?:Лист\s+(\d+(?:[.,]\d+)?)\s*мм|Часть\s+листа\s+(\d+)\s*x)",
-                    RegexOptions.Compiled);
+                if (baseMatIsSheet)
+                {
+                    if (!string.Equals(pair.DrawName.Trim(), baseMat.Trim(), StringComparison.OrdinalIgnoreCase)) 
+                        continue;
+                }
+                else
+                {
+                    if (!rxSimpleSheet.IsMatch(pair.DrawName))
+                        continue;
+                }
 
-                // Использование:
-                Match m = regexUniversal.Match(pair.DrawName);
-                if (!m.Success) continue;
+                Match thicknessMatch = rxThickness.Match(pair.DrawName);
+                if (!thicknessMatch.Success)
+                    continue;
 
-                string thick = m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value;
-                // thick будет: "0,8", "1", "10", "45", "25", "40", "50" и т.д.
-                double thickMm = double.Parse(thick.Replace(',', '.'), CultureInfo.InvariantCulture);
+                double thickMm = double.Parse(
+                    thicknessMatch.Groups[1].Value.Replace(',', '.'),
+                    CultureInfo.InvariantCulture);
 
                 if (thickness != thickMm) continue;
-                Regex rxSize = new Regex(
-                    @"[хx]\s*(\d+)\s*[хx]\s*(\d+)",
-                    RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
                 Match match = rxSize.Match(pair.FullName);
                 if (!match.Success) continue;
 
                 listWidth = double.Parse(match.Groups[1].Value);
                 listLength = double.Parse(match.Groups[2].Value);
+
+                break;
             }
 
             return (listWidth, listLength);
