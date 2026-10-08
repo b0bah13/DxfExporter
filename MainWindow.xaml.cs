@@ -3045,6 +3045,14 @@ namespace DxfExporter
                         structureClass.RowColor = System.Windows.Media.Brushes.AntiqueWhite;
                     }
                 }
+                else if (structureClass.Duplicate)
+                {
+                    if (!structureClass.Status.Contains(ErrorsConst.Duplicate))
+                    {
+                        structureClass.Status += ErrorsConst.Duplicate;
+                        structureClass.RowColor = System.Windows.Media.Brushes.Brown;
+                    }
+                }
 
                 structureClass.Status = structureClass.Status.Trim();
             }

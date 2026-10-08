@@ -10,7 +10,7 @@
 	  <Platforms>AnyCPU;x64</Platforms>
 	  <AssemblyName>Dxf Exporter</AssemblyName>
 	  <Description>Программа для получения Dxf развёрток из файлов Inventor</Description>
-	  <AssemblyVersion>1.0.5.0</AssemblyVersion>
+	  <AssemblyVersion>1.0.5.1</AssemblyVersion>
 	  <Version>1.0.0</Version>
 	  <SignAssembly>False</SignAssembly>
 	  <Company>ООО «СЗЭМО ЗАВОД ВЕНТИЛЯТОР ТДМ»</Company>

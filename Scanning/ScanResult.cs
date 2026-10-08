@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using DxfExporter.Constants;
 
 namespace DxfExporter.Scanning
 {
@@ -18,22 +19,29 @@ namespace DxfExporter.Scanning
 
             var existing = ScannedData.Any(n => n.Path == node.Path && n.MemberName == node.MemberName);
 
-            //TODO: заплатка для приточников - у них могут одинаковые детали лежать в разных местах (путь разный и имя файла). Удалить нахуй(по хорошему) 
-            var existing2 = ScannedData.FirstOrDefault(x => 
-                x.PartNumber == node.PartNumber && 
-                x.Description == node.Description &&
-                x.Material == node.Material &&
-                Equals(x.Thickness, node.Thickness));
-            
-            if (!existing && existing2 == null)
-            {
-                ScannedData.Add(node);
-            }
+            var existing2 = ScannedData.FirstOrDefault(x =>
+                x.PartNumber == node.PartNumber &&
+                x.Description == node.Description);
+                //&&x.Material == node.Material && Equals(x.Thickness, node.Thickness));
 
             if (existing2 != null)
             {
-                existing2.Quantity += node.Quantity;
+                if (existing2.Path != node.Path)
+                {
+                    node.Duplicate = true;
+                    existing2.Duplicate = true;
+                }
             }
+
+            if (!existing) //&& existing2 == null)
+            {
+                ScannedData.Add(node);
+            }
+            
+            //if (existing2 != null)
+            //{
+            //    existing2.Quantity += node.Quantity;
+            //}
         }
 
         /// <summary>

@@ -17,6 +17,7 @@ namespace DxfExporter.Constants
         public const string ErrorCreateDxf = "Не удалось создать dxf";
         public const string LibraryFile = "Файл из библиотеки";
         public const string WrongFileName = "Не корректное имя файла";
+        public const string Duplicate = "Совпадение обозначений и наименований разных деталей";
     }
 
 }

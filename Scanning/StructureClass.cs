@@ -139,6 +139,11 @@ namespace DxfExporter.Scanning
         public bool BigFlat { get; set; } = false;
 
         /// <summary>
+        /// Указывает, есть ли задублированная позиция.
+        /// </summary>
+        public bool Duplicate { get; set; } = false;
+
+        /// <summary>
         /// Проверка реальная толщина у детали или нет
         /// </summary>
         public bool FakeThickness { get; set; } = false;
